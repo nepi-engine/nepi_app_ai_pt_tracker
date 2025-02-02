@@ -344,6 +344,7 @@ onEnterSendInputBoxRangeWindowValue(event, topicName, entryName, other_val) {
 renderApp() {
   const {sendTriggerMsg, sendBoolMsg} = this.props.ros
   const pantilt_connected = this.state.pantilt_connected
+  const NoneOption = <Option>None</Option>
   const selectedClass = this.state.selected_class
   const class_sel = selectedClass !== null && selectedClass !== 'None'
   const connected = this.state.connected === true
@@ -381,6 +382,21 @@ renderApp() {
 
         </Column>
         <Column>
+        <div hidden={(connected !== true )}>
+
+        <Label title={"Select Target Class"}>
+          <Select
+            id="class_select"
+            onChange={(event) => onDropdownSelectedSendStr.bind(this)(event, appNamespace + "/select_class")}
+            value={this.state.selected_class}
+          >
+            {this.state.available_classes_list
+              ? createMenuListFromStrList(this.state.available_classes_list, false, [],['None'],[])
+              : NoneOption}
+          </Select>
+          </Label>
+
+          </div>
 
         </Column>
       </Columns>
@@ -974,7 +990,7 @@ getDisplayImageInfo(){
       <div style={{ display: 'flex' }}>
 
         <div style={{ width: '55%' }}>
-               {this.renderImageSettings()}
+
 
               <CameraViewer
               imageTopic={imageNamespace}
@@ -1005,6 +1021,7 @@ getDisplayImageInfo(){
               {this.renderApp()}
 
               <div hidden={(this.state.connected === false)} >
+              {this.renderImageSettings()}
 
               {this.renderPtSettings()}                
 
