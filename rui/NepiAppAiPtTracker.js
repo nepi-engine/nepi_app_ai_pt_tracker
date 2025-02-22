@@ -31,7 +31,6 @@ import Styles from "./Styles"
 import BooleanIndicator from "./BooleanIndicator"
 
 
-import AiDetectorMgr from "./NepiMgrAiDetector"
 import CameraViewer from "./CameraViewer"
 import NepiIFSaveData from "./Nepi_IF_SaveData"
 
@@ -1024,10 +1023,6 @@ getDisplayImageInfo(){
               {this.renderImageSettings()}
 
               {this.renderPtSettings()}                
-
-                <AiDetectorMgr
-                        title={"Nepi_Mgr_AI_Detector"}
-                />
 
                 {this.renderTargetSettings()}
               </div>
