@@ -531,14 +531,11 @@ onClickToggleShowPtSettings(){
 }
 
 renderPtSettings() {
-  const {sendTriggerMsg, sendBoolMsg} = this.props.ros
   const pantilt_options = this.createPTXOptions()
   const sel_pantilt = this.state.selected_pantilt
-  const pantilt_connected = this.state.pantilt_connected
   const set_tilt_min = this.state.set_tilt_min ? this.state.set_tilt_min : -180
   const set_tilt_max = this.state.set_tilt_max ? this.state.set_tilt_max : 180
   const NoneOption = <Option>None</Option>
-  const connected = this.state.connected === true
   const appNamespace = this.getAppNamespace()
 
 
@@ -755,7 +752,6 @@ onClickToggleShowImageSettings(){
 
 renderImageSettings() {
   const NoneOption = <Option>None</Option>
-  const connected = this.state.connected === true
   const appNamespace = this.getAppNamespace()
 
   return (
@@ -827,11 +823,9 @@ onClickToggleShowTargetSettings(){
 }
 
 renderTargetSettings() {
-  const {sendTriggerMsg, sendBoolMsg} = this.props.ros
+  const {sendBoolMsg} = this.props.ros
   const NoneOption = <Option>None</Option>
   const selectedClass = this.state.selected_class
-  const class_sel = selectedClass !== null && selectedClass !== 'None'
-  const connected = this.state.connected === true
   const appNamespace = this.getAppNamespace()
 
 
@@ -965,7 +959,7 @@ getDisplayImageInfo(){
     text = "Source"
   }
   else if (sel_image === 'Detection'){
-    namespace = "/" + namespacePrefix + "/" + deviceId + "/" + 'ai_detector_mgr/detection_image'
+    namespace = "/" + namespacePrefix + "/" + deviceId + "/" + "ai_detector_mgr/detection_image"
     text = "Detection"
   }
   else {
