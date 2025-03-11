@@ -1,9 +1,9 @@
 bool app_enabled
 string app_msg
 
-bool classifier_running
 
-string image_topic
+string[] available_detectors_list
+string selected_detector
 float32 image_fov_vert_degs 
 float32 image_fov_horz_degs 
 
