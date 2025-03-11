@@ -201,7 +201,7 @@ class pantiltTargetTrackerApp(object):
     message = "TARGETING NOT ENABLED"
     cv2_img = nepi_img.create_message_image(message)
     self.app_ne_img = nepi_img.cv2img_to_rosimg(cv2_img)
-    self.app_ne_img.header.stamp = nepi_ros.ros_ros_time_now()
+    self.app_ne_img.header.stamp = nepi_ros.ros_time_now()
     self.image_pub.publish(self.app_ne_img)
 
     message = "WAITING FOR AI DETECTOR TO START"
@@ -286,9 +286,9 @@ class pantiltTargetTrackerApp(object):
     ## Start Node Processes
     # Set up the timer that start scanning when no objects are detected
     nepi_msg.publishMsgInfo(self,"Setting up processes")
-    nepi_ros.timer(nepi_ros.ros_ros_ros_duration(self.UPDATER_PROCESS_DELAY), self.updaterCb)
-    nepi_ros.timer(nepi_ros.ros_ros_ros_duration(self.SCAN_TRACK_PROCESS_DELAY), self.scanTrackCb)
-    nepi_ros.timer(nepi_ros.ros_ros_ros_duration(self.IMG_PUB_PROCESS_DELAY), self.imagePubCb)
+    nepi_ros.timer(nepi_ros.ros_duration(self.UPDATER_PROCESS_DELAY), self.updaterCb)
+    nepi_ros.timer(nepi_ros.ros_duration(self.SCAN_TRACK_PROCESS_DELAY), self.scanTrackCb)
+    nepi_ros.timer(nepi_ros.ros_duration(self.IMG_PUB_PROCESS_DELAY), self.imagePubCb)
 
     ##############################
     ## Initiation Complete
@@ -518,7 +518,7 @@ class pantiltTargetTrackerApp(object):
 
             nepi_msg.publishMsgWarn(self,'Registered : ' + img_topic +  ' ' + str(self.img_subs_dict[img_topic]))
             time.sleep(1)
-            self.ros_no_img_img.header.stamp = nepi_ros.ros_ros_time_now()
+            self.ros_no_img_img.header.stamp = nepi_ros.ros_time_now()
             detection_image_pub.publish(self.ros_no_img_img)
             found_object_pub.publish(ObjectCount())
             bounding_box_pub.publish(BoundingBoxes())
@@ -575,7 +575,7 @@ class pantiltTargetTrackerApp(object):
 
             nepi_msg.publishMsgWarn(self,'Registered : ' + img_topic +  ' ' + str(self.img_subs_dict[img_topic]))
             time.sleep(1)
-            self.ros_no_img_img.header.stamp = nepi_ros.ros_ros_time_now()
+            self.ros_no_img_img.header.stamp = nepi_ros.ros_time_now()
             detection_image_pub.publish(self.ros_no_img_img)
             found_object_pub.publish(ObjectCount())
             bounding_box_pub.publish(BoundingBoxes())
@@ -766,19 +766,19 @@ class pantiltTargetTrackerApp(object):
     if app_enabled == False:
       #nepi_msg.publishMsgWarn(self,"Publishing Not Enabled image")
       if not nepi_ros.is_shutdown():
-        self.app_ne_img.header.stamp = nepi_ros.ros_ros_time_now()
+        self.app_ne_img.header.stamp = nepi_ros.ros_time_now()
         self.image_pub.publish(self.app_ne_img)
     elif self.pt_connected == False:
       if not nepi_ros.is_shutdown():
-        self.no_class_img.header.stamp = nepi_ros.ros_ros_time_now()
+        self.no_class_img.header.stamp = nepi_ros.ros_time_now()
         self.image_pub.publish(self.no_pt_img)
     elif self.detector_running == False:
       if not nepi_ros.is_shutdown():
-        self.detector_nr_img.header.stamp = nepi_ros.ros_ros_time_now()
+        self.detector_nr_img.header.stamp = nepi_ros.ros_time_now()
         self.image_pub.publish(self.detector_nr_img)
     elif self.class_selected == False:
       if not nepi_ros.is_shutdown():
-        self.no_class_img.header.stamp = nepi_ros.ros_ros_time_now()
+        self.no_class_img.header.stamp = nepi_ros.ros_time_now()
         self.image_pub.publish(self.no_class_img)
 
     # Update status app msg
@@ -1345,9 +1345,9 @@ class pantiltTargetTrackerApp(object):
         self.start_scanning = True
 
         track_delay = float(1)/nepi_ros.get_param(self,'~track_update_rate',  self.init_track_update_rate)
-        ros_ros_time_now = time.time()
-        if (ros_ros_time_now - self.last_track_time + self.SCAN_TRACK_PROCESS_DELAY) > track_delay:
-          self.last_track_time = ros_ros_time_now 
+        ros_time_now = time.time()
+        if (ros_time_now - self.last_track_time + self.SCAN_TRACK_PROCESS_DELAY) > track_delay:
+          self.last_track_time = ros_time_now 
           error_goal = nepi_ros.get_param(self,"~error_goal",self.init_error_goal)
           track_speed_ratio = nepi_ros.get_param(self,"~track_speed_ratio",self.init_track_speed_ratio)
           track_tilt_offset = nepi_ros.get_param(self,"~track_tilt_offset", self.init_track_tilt_offset)         
