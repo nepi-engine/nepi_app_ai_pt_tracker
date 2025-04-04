@@ -45,8 +45,8 @@ from nepi_ros_interfaces.msg import AiModelInfo, AiModelMgrStatus,
 from nepi_app_ai_targeting.msg import AiTargetingStatus
 from nepi_app_ai_pt_tracker.msg import AiPtTrackerStatus , TrackingErrors
 
-from nepi_sdk.save_data_if import SaveDataIF
-from nepi_sdk.save_cfg_if import SaveCfgIF
+from nepi_api.sys_if_save_data import SaveDataIF
+from nepi_api.sys_if_save_cfg import SaveCfgIF
 
 
 #########################################
@@ -183,20 +183,11 @@ class pantiltTargetTrackerApp(object):
     nepi_msg.createMsgPublishers(self)
     nepi_msg.publishMsgInfo(self,"Starting Initialization Processes")
     ##############################
-    ## Initialize Class Variables
+    # Initialize Params
+    self.initCb(do_updates = False)
 
-
-    self.initParamServerValues(do_updates = False)
-    self.resetParamServer(do_updates = False)
-
-
-    # Setup Node Publishers
-    self.status_pub = rospy.Publisher("~status", AiPtTrackerStatus, queue_size=1, latch=True)
-    self.tracking_error_pub = rospy.Publisher("~errors", TrackingErrors, queue_size=1, latch=True)
-    self.image_pub = rospy.Publisher("~tracking_image",Image,queue_size=1, latch = True)
-    time.sleep(1)
-
-
+    ##############################
+   
     # Message Image to publish when detector not running
     message = "TARGETING NOT ENABLED"
     cv2_img = nepi_img.create_message_image(message)
@@ -217,23 +208,12 @@ class pantiltTargetTrackerApp(object):
     self.no_pt_img = nepi_img.cv2img_to_rosimg(cv2_img)
 
 
-
-
-    # Set up save data and save config services ########################################################
-    factory_data_rates= {}
-    for d in self.data_products:
-        factory_data_rates[d] = [0.0, 0.0, 100.0] # Default to 0Hz save rate, set last save = 0.0, max rate = 100.0Hz
-    if 'tracking_image' in self.data_products:
-        factory_data_rates['tracking_image'] = [1.0, 0.0, 100.0] 
-    self.save_data_if = SaveDataIF(data_product_names = self.data_products, factory_data_rate_dict = factory_data_rates)
-    # Temp Fix until added as NEPI ROS Node
-    self.save_cfg_if = SaveCfgIF(updateParamsCallback=self.initParamServerValues, 
-                                 paramsModifiedCallback=self.updateFromParamServer)
-
-    # Class Subscribers
-    ## App Setup ########################################################
-    app_reset_app_sub = rospy.Subscriber('~reset_app', Empty, self.resetAppCb, queue_size = 10)
-    self.initParamServerValues(do_updates=False)
+    ##############################
+    # Setup Node Publishers
+    self.status_pub = rospy.Publisher("~status", AiPtTrackerStatus, queue_size=1, latch=True)
+    self.tracking_error_pub = rospy.Publisher("~errors", TrackingErrors, queue_size=1, latch=True)
+    self.image_pub = rospy.Publisher("~tracking_image",Image,queue_size=1, latch = True)
+    time.sleep(1)
 
     # App Specific Subscribers
     rospy.Subscriber('~publish_status', Empty, self.pubStatusCb, queue_size = 10)
@@ -260,6 +240,22 @@ class pantiltTargetTrackerApp(object):
     rospy.Subscriber("~set_error_goal_deg", Float32, self.setErrorGoalCb, queue_size = 10)
 
 
+    self.save_cfg_if = SaveCfgIF(initCb=self.initCb, resetCb=self.resetCb,  factoryResetCb=self.factoryResetCb)
+    ready = self.save_cfg_if.wait_for_ready()
+
+    ##############################
+    self.initCb(do_updates = True)
+    # Set up save data and save config services ########################################################
+    factory_data_rates= {}
+    for d in self.data_products:
+        factory_data_rates[d] = [0.0, 0.0, 100.0] # Default to 0Hz save rate, set last save = 0.0, max rate = 100.0Hz
+    if 'tracking_image' in self.data_products:
+        factory_data_rates['tracking_image'] = [1.0, 0.0, 100.0] 
+    self.save_data_if = SaveDataIF(data_product_names = self.data_products, factory_data_rate_dict = factory_data_rates)
+    
+
+
+    ##############################
     # Set up AI Manager Status subscriber
     self.ai_mgr_namespace = os.path.join(self.base_namespace, self.AI_MANAGER_NODE_NAME)
     nepi_msg.publishMsgInfo(self,"Waiting for Ai Model Mgr status msg")
@@ -277,12 +273,7 @@ class pantiltTargetTrackerApp(object):
     time.sleep(1)    
 
 
-    # Set up ai targeting subscriber
-    #################################
-
-
-
-
+    ##############################
     ## Start Node Processes
     # Set up the timer that start scanning when no objects are detected
     nepi_msg.publishMsgInfo(self,"Setting up processes")
@@ -300,12 +291,8 @@ class pantiltTargetTrackerApp(object):
   #######################
   ### App Config Functions
 
-  def resetAppCb(self,msg):
-    self.resetApp()
 
-  def resetApp(self):
-
-
+  def factoryResetCb(self):
     nepi_ros.set_param(self,'~image_fov_vert',  self.FACTORY_FOV_VERT_DEG)
     nepi_ros.set_param(self,'~image_fov_horz', self.FACTORY_FOV_HORZ_DEG)
 
@@ -330,24 +317,15 @@ class pantiltTargetTrackerApp(object):
     nepi_ros.set_param(self,"~track_tilt_offset",self.FACTORY_TRACK_TILT_OFFSET_DEG)
     nepi_ros.set_param(self,"~error_goal",self.FACTORY_ERROR_GOAL_DEG)
     
+    nepi_ros.set_param(self,"~app_enabled",False)
+
     self.last_image_topic = ""
     self.last_sel_pt = ""
-    nepi_ros.set_param(self,"~app_enabled",False)
+
     self.publish_status()
 
-  def saveConfigCb(self, msg):  # Just update Class init values. Saving done by Config IF system
-    pass # Left empty for sim, Should update from param server
 
-  def setCurrentAsDefault(self):
-    self.initParamServerValues(do_updates = False)
-
-  def updateFromParamServer(self):
-    #nepi_msg.publishMsgWarn(self,"Debugging: param_dict = " + str(param_dict))
-    #Run any functions that need updating on value change
-    # Don't need to run any additional functions
-    pass
-
-  def initParamServerValues(self,do_updates = True):
+  def initCb(self,do_updates = False):
     nepi_msg.publishMsgInfo(self," Setting init values to param values")
     self.init_selected_detector = nepi_ros.get_param(self,"~selected_detector", "")
     self.init_image_fov_vert = nepi_ros.get_param(self,'~image_fov_vert',  self.FACTORY_FOV_VERT_DEG)
@@ -376,11 +354,12 @@ class pantiltTargetTrackerApp(object):
 
     self.init_app_enabled = nepi_ros.get_param(self,"~app_enabled",False)
 
-    self.resetParamServer(do_updates)
+    if do_updates == True:
+      self.resetCb(do_updates)
 
 
 
-  def resetParamServer(self,do_updates = True):
+  def resetCb(self,do_updates = True):
     nepi_ros.set_param(self,'~selected_detector', self.init_selected_detector)
     nepi_ros.set_param(self,'~image_fov_vert',  self.init_image_fov_vert)
     nepi_ros.set_param(self,'~image_fov_horz', self.init_image_fov_horz)
@@ -405,9 +384,7 @@ class pantiltTargetTrackerApp(object):
 
     nepi_ros.set_param(self,"~error_goal",self.init_error_goal)
     nepi_ros.set_param(self,'~app_enabled',self.init_app_enabled)
-    if do_updates:
-        self.updateFromParamServer()
-        self.publish_status()
+    self.publish_status()
 
 
   ###################
