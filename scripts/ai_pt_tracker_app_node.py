@@ -20,7 +20,7 @@ import os
 #### ROS namespace setup
 #NEPI_BASE_NAMESPACE = '/nepi/s2x/'
 #os.environ["ROS_NAMESPACE"] = NEPI_BASE_NAMESPACE[0:-1] # remove to run as automation script
-import rospy
+
 import time
 import sys
 import copy
@@ -200,7 +200,7 @@ class pantiltTargetTrackerApp(object):
     cv2_img = nepi_img.create_message_image(message)
     self.app_ne_img = nepi_img.cv2img_to_rosimg(cv2_img)
     self.app_ne_img.header.stamp = nepi_ros.ros_time_now()
-    self.image_pub.publish(self.app_ne_img)
+    self.node_if.publish_pub('image_pub', self.app_ne_img)
 
     message = "WAITING FOR AI DETECTOR TO START"
     cv2_img = nepi_img.create_message_image(message)
@@ -215,29 +215,12 @@ class pantiltTargetTrackerApp(object):
     self.no_pt_img = nepi_img.cv2img_to_rosimg(cv2_img)
 
 
-    ##############################
-    # Setup Node Publishers
-    self.PARAMS_DICT = {
-        'param1_name': {
-            'factory_val': 100
-        },
-            'param1_name': {
-            'factory_val': "Something"
-        }
-    }
 
-    self.PARAMS_CONFIG_DICT = {
-            'init_callback': None,
-            'reset_callback': None,
-            'factory_reset_callback': None,
-            'namespace': '~',
-            'params_dict': self.PARAMS_DICT
-    }
 
-    nepi_ros.set_param(self,'~image_fov_vert',  self.FACTORY_FOV_VERT_DEG)
-    nepi_ros.set_param(self,'~image_fov_horz', self.FACTORY_FOV_HORZ_DEG)
+    self.node_if.set_param('image_fov_vert',  self.FACTORY_FOV_VERT_DEG)
+    self.node_if.set_param('image_fov_horz', self.FACTORY_FOV_HORZ_DEG)
 
-    nepi_ros.set_param(self,'~selected_detector', "")
+    self.node_if.set_param('selected_detector', "")
     nepi_ros.set_param(self,"~selected_class","None")
     nepi_ros.set_param(self,"~target_q_len",self.FACTORY_TARGET_Q_LEN)
     nepi_ros.set_param(self,"~target_l_len",self.FACTORY_TARGET_L_LEN)
@@ -260,108 +243,375 @@ class pantiltTargetTrackerApp(object):
     
     nepi_ros.set_param(self,"~app_enabled",False)
 
- self.save_cfg_if = SaveCfgIF(initCb=self.initCb, resetCb=self.resetCb,  factoryResetCb=self.factoryResetCb)
-    ready = self.save_cfg_if.wait_for_ready()
+     ##############################
+    ### Setup Node
 
-        ##############################  
-        # Create NodeClassIF Class  
+    # Configs Config Dict ####################
+    self.CFGS_DICT = {
+            'init_callback': self.initCb,
+            'reset_callback': self.resetCb,
+            'factory_reset_callback': self.factoryResetCb,
+            'init_configs': True,
+            'namespace': self.node_namespace
+    }
 
-        # Services Config Dict ####################
-        self.SRVS_DICT = {
-            'setting_query': {
-                'topic': 'settings_capabilities_query',
-                'msg': SettingsCapabilitiesQuery
-            }
+    # Params Config Dict ####################
+    self.PARAMS_DICT = {
+        'app_enabled': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_app_enabled
+        },
+        'selected_detector': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_selected_detector
+        },
+        'image_fov_vert': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_image_fov_vert,
+        },
+        'image_fov_horz': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_image_fov_horz
+        },
+        'selected_class': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_selected_class
+        },
+        'target_q_len': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_target_q_len
+        },
+        'target_l_len': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_target_l_len
+        },
+        'min_ratio': {
+            'namespace': self.node_namespace,
+            'factory_val': self.FACTORY_MIN_AREA_RATIO
+        },
+        'pt_namespace': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_pt_namespace
+        },
+        'track_update_rate': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_track_update_rate
+        },
+        'scan_speed_ratio': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_scan_speed_ratio
+        },
+        'scan_tilt_offset': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_scan_tilt_offset
+        },
+        'min_pan_angle': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_min_pan
+        },
+        'max_pan_angle': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_max_pan
+        },
+        'min_tilt_angle': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_min_tilt
+        },
+        'max_tilt_angle': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_max_tilt
+        },
+        'track_speed_ratio': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_track_speed_ratio
+        },
+        'track_tilt_offset': {
+            'namespace': self.node_namespace,
+            'factory_val': self.init_track_tilt_offset
+        },
+        'error_goal': {
+            'namespace': self.node_namespace,
+            'factory_val': [] self.init_error_goal
         }
+    }
 
-        self.SRVS_CONFIG_DICT = {
-                'namespace': self.settings_namespace,
-                'srvs_dict': self.SRVS_DICT
-        }
+    # Publishers Config Dict ####################
+    self.PUBS_DICT = {
+        'status': {
+            'namespace': self.node_namespace,
+            'topic': 'status',
+            'msg': AiPtTrackerStatus,
+            'qsize': 1,
+            'latch': True
+        },
+        'errors': {
+            'namespace': self.node_namespace,
+            'topic': 'errors',
+            'msg': TrackingErrors,
+            'qsize': 1,
+            'latch': True
+        },
+        'navpose_pub': {
+            'namespace': self.node_namespace,
+            'topic': 'navpose',
+            'msg': NavPoseData,
+            'qsize': 1,
+            'latch': True
+        },
+        'tracking_image': {
+            'namespace': self.node_namespace,
+            'topic': 'tracking_image',
+            'msg': Image,
+            'qsize': 1,
+            'latch': True
+        },       
+        'status': {
+            'namespace': self.node_namespace,
+            'topic': 'status',
+            'msg': AiPtTrackerStatus,
+            'qsize': 1,
+            'latch': True
+        },
+        'PTX_GOHOME_TOPIC': {
+            'namespace': self.node_namespace,
+            'topic': 'PTX_GOHOME_TOPIC',
+            'msg': Empty,
+            'qsize': 10,
+            'latch': None
+        },
+        'PTX_SET_SPEED_RATIO_TOPIC': {
+            'namespace': self.node_namespace,
+            'topic': 'PTX_SET_SPEED_RATIO_TOPIC',
+            'msg': Float32,
+            'qsize': 10,
+            'latch': None
+        },
+        'PTX_JOG_POSITION_TOPIC': {
+            'namespace': self.node_namespace,
+            'topic': 'PTX_JOG_POSITION_TOPIC',
+            'msg': Image,
+            'qsize': 10,
+            'latch': None
+        }, 
+        'PTX_GOTO_PAN_RATIO_TOPIC': {
+            'namespace': self.node_namespace,
+            'topic': 'PTX_GOTO_PAN_RATIO_TOPIC',
+            'msg': Float32,
+            'qsize': 10,
+            'latch': None
+        },
+        'PTX_GOTO_TILT_RATIO_TOPIC': {
+            'namespace': self.node_namespace,
+            'topic': 'PTX_GOTO_TILT_RATIO_TOPIC',
+            'msg': Float32,
+            'qsize': 10,
+            'latch': None
+        },
+        'PTX_JOG_PAN_TOPIC': {
+            'tracking_image': self.node_namespace,
+            'topic': 'PTX_JOG_PAN_TOPIC',
+            'msg': SingleAxisTimedMove,
+            'qsize': 10,
+            'latch': None
+        }, 
+        'PTX_JOG_TILT_TOPIC': {
+            'namespace': self.node_namespace,
+            'topic': 'PTX_JOG_TILT_TOPIC',
+            'msg': SingleAxisTimedMove,
+            'qsize': 10,
+            'latch': None
+        },
+        'PTX_SET_SOFT_LIMITS_TOPIC': {
+            'namespace': self.node_namespace,
+            'topic': 'PTX_SET_SOFT_LIMITS_TOPIC',
+            'msg': PanTiltLimits,
+            'qsize': 10,
+            'latch': None
+        },
+        'PTX_STOP_TOPIC': {
+            'tracking_image': self.node_namespace,
+            'topic': 'PTX_STOP_TOPIC',
+            'msg': Empty,
+            'qsize': 10,
+            'latch': None
+        }, 
+    }
 
-        # Pubs Config Dict ####################
-        self.PUBS_DICT = {
-            'update_pub': {
-                'msg': Setting,
-                'topic': 'update_setting',
-                'qsize': 1,
-                'latch': False
-            },
-            'reset_pub': {
-                'msg': Empty,
-                'topic': 'reset_settings',
-                'qsize': 1,
-                'latch': False
-            }
-        }
+    # Subscribers Config Dict ####################
+    self.SUBS_DICT = {
+        'publish_status': {
+            'namespace': self.node_namespace,
+            'topic': 'publish_status',
+            'msg': Empty,
+            'qsize': 10,
+            'callback': self.pubStatusCb, 
+            'callback_args': ()
+        },
+        'enable_app': {
+            'namespace': self.node_namespace,
+            'topic': 'enable_app',
+            'msg': Bool,
+            'qsize': 1,
+            'callback': self.appEnableCb, 
+            'callback_args': ()
+        },
+        'set_image_fov_vert': {
+            'namespace': self.node_namespace,
+            'topic': 'set_image_fov_vert',
+            'msg': Float32,
+            'qsize': 1,
+            'callback': self.setVertFovCb, 
+            'callback_args': ()
+        },
+        'set_image_fov_horz': {
+            'namespace': self.node_namespace,
+            'topic': 'set_image_fov_horz',
+            'msg': Float32,
+            'qsize': 1,
+            'callback': self.setHorzFovCb, 
+            'callback_args': ()
+        },
+        'select_detector': {
+            'namespace': self.node_namespace,
+            'topic': 'select_detector',
+            'msg': String,
+            'qsize': 1,
+            'callback': self.setModelCb, 
+            'callback_args': ()
+        },
+        'select_class': {
+            'namespace': self.node_namespace,
+            'topic': 'select_class',
+            'msg': String,
+            'qsize': 1,
+            'callback': self.setClassCb, 
+            'callback_args': ()
+        },
+        'set_target_queue_len': {
+            'namespace': self.node_namespace,
+            'topic': 'set_target_queue_len',
+            'msg': Int32,
+            'qsize': 10,
+            'callback': self.setTargetQLenCb, 
+            'callback_args': ()
+        },
+        'set_target_lost_len': {
+            'namespace': self.node_namespace,
+            'topic': 'set_target_lost_len',
+            'msg': Int32,
+            'qsize': 10,
+            'callback': self.setTargetLLenCb, 
+            'callback_args': ()
+        },
+        'set_min_area_ratio': {
+            'namespace': self.node_namespace,
+            'topic': 'set_min_area_ratio',
+            'msg': Float32,
+            'qsize': 10,
+            'callback': self.setMinAreaCb, 
+            'callback_args': ()
+        },
+        'select_pantilt': {
+            'namespace': self.node_namespace,
+            'topic': 'select_pantilt',
+            'msg': String,
+            'qsize': 10,
+            'callback': self.setPtTopicCb, 
+            'callback_args': ()
+        },
+        'set_track_update_rate': {
+            'namespace': self.node_namespace,
+            'topic': 'set_track_update_rate',
+            'msg': Float32,
+            'qsize': 10,
+            'callback': self.setTrackUpdateRateCb, 
+            'callback_args': ()
+        }, 
+        'set_scan_speed_ratio': {
+            'namespace': self.node_namespace,
+            'topic': 'set_scan_speed_ratio',
+            'msg': Float32,
+            'qsize': 10,
+            'callback': self.setScanSpeedCb, 
+            'callback_args': ()
+        },
+        'set_scan_tilt_offset': {
+            'namespace': self.node_namespace,
+            'topic': 'set_scan_tilt_offset',
+            'msg': Float32,
+            'qsize': 10,
+            'callback': self.setScanTiltOffsetCb, 
+            'callback_args': ()
+        },
+        'set_min_max_pan_angles': {
+            'namespace': self.node_namespace,
+            'topic': 'set_min_max_pan_angles',
+            'msg': RangeWindow,
+            'qsize': 10,
+            'callback': self.setMinMaxPanCb, 
+            'callback_args': ()
+        },
+        'set_min_max_tilt_angles': {
+            'namespace': self.node_namespace,
+            'topic': 'set_min_max_tilt_angles',
+            'msg': RangeWindow,
+            'qsize': 10,
+            'callback': self.setMinMaxTiltCb, 
+            'callback_args': ()
+        },
+        'set_track_speed_ratio': {
+            'namespace': self.node_namespace,
+            'topic': 'set_track_speed_ratio',
+            'msg': Float32,
+            'qsize': 10,
+            'callback': self.setTrackSpeedCb, 
+            'callback_args': ()
+        },
+        'set_track_tilt_offset': {
+            'namespace': self.node_namespace,
+            'topic': 'set_track_tilt_offset',
+            'msg': Float32,
+            'qsize': 10,
+            'callback': self.setTrackTiltOffsetCb, 
+            'callback_args': ()
+        },        
+        'set_error_goal_deg': {
+            'namespace': self.node_namespace,
+            'topic': 'set_error_goal_deg',
+            'msg': Float32,
+            'qsize': 10,
+            'callback': self.setErrorGoalCb, 
+            'callback_args': ()
+        },                
+    }
 
-        self.PUBS_CONFIG_DICT = {
-            'namespace': self.settings_namespace,
-            'pubs_dict': self.PUBS_DICT
-        }
+
+    # Create Node Class ####################
+    self.node_if = NodeClassIF(self,
+                    configs_dict = self.CFGS_DICT,
+                    params_dict = self.PARAMS_DICT,
+                    pubs_dict = self.PUBS_DICT,
+                    subs_dict = self.SUBS_DICT,
+                    log_class_name = True
+    )
+
+    ready = self.node_if.wait_for_ready()
 
 
 
-        # Subs Config Dict ####################
-        self.SUBS_DICT = {
-            'settings_sub': {
-                'msg': Settings,
-                'topic': 'system_settings',
-                'qsize': 1,
-                'callback': self._settingsCb,
-                'callback_args': ()
-            }
-        }
-
-        self.SUBS_CONFIG_DICT = {
-            'namespace': self.settings_namespace,
-            'subs_dict': self.SUBS_DICT
-        }
-
-
-        self.class_if = ConnectNodeClassIF(srvs_config_dict = self.SRVS_CONFIG_DICT,
-                        pubs_config_dict = self.PUBS_CONFIG_DICT,
-                        subs_config_dict = self.SUBS_CONFIG_DICT
+        self.class_if = ConnectNodeClassIF(srvs_dict = self.SRVS_DICT,
+                        pubs_dict = self.PUBS_DICT,
+                        subs_dict = self.SUBS_DICT
                         )
 
     
 
 
 
-    self.status_pub = rospy.Publisher("~status", AiPtTrackerStatus, queue_size=1, latch=True)
-    self.tracking_error_pub = rospy.Publisher("~errors", TrackingErrors, queue_size=1, latch=True)
-    self.image_pub = rospy.Publisher("~tracking_image",Image,queue_size=1, latch = True)
+    self.status_pub = self.nepi_ros.create_publisher("~status", AiPtTrackerStatus, queue_size=1, latch=True)
+    self.tracking_error_pub = self.nepi_ros.create_publisher("~errors", TrackingErrors, queue_size=1, latch=True)
+    self.image_pub = self.nepi_ros.create_publisher("~tracking_image",Image,queue_size=1, latch = True)
     time.sleep(1)
-
-    # App Specific Subscribers
-    rospy.Subscriber('~publish_status', Empty, self.pubStatusCb, queue_size = 10)
-    rospy.Subscriber('~enable_app', Bool, self.appEnableCb, queue_size = 10)
-
-    rospy.Subscriber("~set_image_fov_vert", Float32, self.setVertFovCb, queue_size = 10)
-    rospy.Subscriber("~set_image_fov_horz", Float32, self.setHorzFovCb, queue_size = 10)
-
-    rospy.Subscriber('~select_detector', String, self.setModelCb, queue_size = 10)
-    rospy.Subscriber('~select_class', String, self.setClassCb, queue_size = 10)
-    rospy.Subscriber("~set_target_queue_len", Int32, self.setTargetQLenCb, queue_size = 10)
-    rospy.Subscriber("~set_target_lost_len", Int32, self.setTargetLLenCb, queue_size = 10)
-    rospy.Subscriber("~set_min_area_ratio", Float32, self.setMinAreaCb, queue_size = 10)
-
-    rospy.Subscriber('~select_pantilt', String, self.setPtTopicCb, queue_size = 10)
-    rospy.Subscriber("~set_track_update_rate", Float32, self.setTrackUpdateRateCb, queue_size = 10)
-    rospy.Subscriber("~set_scan_speed_ratio", Float32, self.setScanSpeedCb, queue_size = 10)
-    rospy.Subscriber("~set_scan_tilt_offset", Float32, self.setScanTiltOffsetCb, queue_size = 10)
-    rospy.Subscriber('~set_min_max_pan_angles', RangeWindow, self.setMinMaxPanCb, queue_size = 10)
-    rospy.Subscriber('~set_min_max_tilt_angles', RangeWindow, self.setMinMaxTiltCb, queue_size = 10)
-    rospy.Subscriber("~set_track_speed_ratio", Float32, self.setTrackSpeedCb, queue_size = 10)
-    rospy.Subscriber("~set_track_tilt_offset", Float32, self.setTrackTiltOffsetCb, queue_size = 10)
-
-    rospy.Subscriber("~set_error_goal_deg", Float32, self.setErrorGoalCb, queue_size = 10)
-
-
-
-
-
-   
 
     ##############################
     self.initCb(do_updates = True)
@@ -380,16 +630,16 @@ class pantiltTargetTrackerApp(object):
     self.ai_mgr_namespace = os.path.join(self.base_namespace, self.AI_MANAGER_NODE_NAME)
     self.msg_if.pub_info("Waiting for Ai Model Mgr status msg")
     nepi_ros.wait_for_topic(self.ai_mgr_namespace)
-    rospy.Subscriber(self.ai_mgr_namespace  + "/status", AiModelMgrStatus, self.aiMgrStatusCb, queue_size = 1)
+    self.nepi_ros.create_subscriber(self.ai_mgr_namespace  + "/status", AiModelMgrStatus, self.aiMgrStatusCb, queue_size = 1)
     while self.ai_mgr_status_msg is None:
       nepi_ros.sleep(1)
 
 
     # Start AI Manager Subscribers
     FOUND_OBJECT_TOPIC = self.ai_mgr_namespace  + "/found_object"
-    rospy.Subscriber(FOUND_OBJECT_TOPIC, ObjectCount, self.foundObjectCb, queue_size = 1)
+    self.nepi_ros.create_subscriber(FOUND_OBJECT_TOPIC, ObjectCount, self.foundObjectCb, queue_size = 1)
     BOUNDING_BOXES_TOPIC = self.ai_mgr_namespace  + "/bounding_boxes"
-    rospy.Subscriber(BOUNDING_BOXES_TOPIC, BoundingBoxes, self.objectDetectedCb, queue_size = 1)
+    self.nepi_ros.create_subscriber(BOUNDING_BOXES_TOPIC, BoundingBoxes, self.objectDetectedCb, queue_size = 1)
     time.sleep(1)    
 
 
@@ -405,7 +655,7 @@ class pantiltTargetTrackerApp(object):
     ## Initiation Complete
     self.msg_if.pub_info(" Initialization Complete")
     # Spin forever (until object is detected)
-    rospy.spin()
+    self.nepi_ros.spin()
     ##############################
 
   #######################
@@ -435,21 +685,21 @@ class pantiltTargetTrackerApp(object):
   def publish_status(self):
     status_msg = AiPtTrackerStatus()
 
-    status_msg.app_enabled = nepi_ros.get_param(self,'~app_enabled',self.init_app_enabled)
+    status_msg.app_enabled = self.node_if.get_param('app_enabled')
     status_msg.app_msg = self.app_msg
     
     status_msg.available_detectors_list = sorted(self.detectors_list)
-    selected_detector = nepi_ros.get_param(self,'~selected_detector',  self.init_selected_detector)
+    selected_detector = self.node_if.get_param('selected_detector')
     if selected_detector not in self.detectors_list:
       selected_detector = "None"
     status_msg.selected_detector = selected_detector 
     status_msg.detector_connected = self.detector_connected
 
-    status_msg.image_fov_vert_degs = nepi_ros.get_param(self,'~image_fov_vert',  self.init_image_fov_vert)
-    status_msg.image_fov_horz_degs = nepi_ros.get_param(self,'~image_fov_horz', self.init_image_fov_horz)
+    status_msg.image_fov_vert_degs = self.node_if.get_param('image_fov_vert')
+    status_msg.image_fov_horz_degs = self.node_if.get_param('image_fov_horz')
 
     status_msg.available_classes_list = sorted(self.classes_list)
-    selected_class = nepi_ros.get_param(self,'~selected_class',  self.init_selected_class)
+    selected_class = self.node_if.get_param('selected_class')
     if selected_class not in self.classes_list:
       selected_class = "None"
     status_msg.selected_class = selected_class 
@@ -508,7 +758,7 @@ class pantiltTargetTrackerApp(object):
     status_msg.is_tracking = self.is_tracking
     status_msg.pan_direction = self.current_scan_dir
 
-    self.status_pub.publish(status_msg)
+    self.node_if.publish_pub('image_pub', status_msg)
 
 
         
@@ -550,7 +800,7 @@ class pantiltTargetTrackerApp(object):
 
 
     # Setup PT subscribers and Publishers if needed
-    sel_pt = nepi_ros.get_param(self,'~pt_namespace',  self.init_pt_namespace)
+    sel_pt = self.node_if.get_param('pt_namespace')
     pt_valid = sel_pt != "None" and sel_pt != ""
     pt_changed = sel_pt != self.last_sel_pt
 
@@ -594,7 +844,7 @@ class pantiltTargetTrackerApp(object):
       ai_mgr_status_response = None
       self.msg_if.pub_warn("Failed to call AI MGR STATUS service" + str(e))
       self.detector_running = False
-      nepi_ros.set_param(self,'~selected_detector', "")
+      self.node_if.set_param('selected_detector', "")
       #app_msg += ", AI Detector not connected"
     if ai_mgr_status_response != None:
       #app_msg += ", AI Detector connected"
@@ -614,7 +864,7 @@ class pantiltTargetTrackerApp(object):
         #self.msg_if.pub_warn("got ai manager status: " + classes_str)
         update_status = True
       self.classes_list = classes_list
-      nepi_ros.set_param(self,'~selected_detector', self.current_detector)
+      self.node_if.set_param('selected_detector', self.current_detector)
       #self.msg_if.pub_warn("Got image topics last and current: " + self.last_image_topic + " " + self.current_image_topic)
 
       # Update Image Topic Subscriber
@@ -642,7 +892,7 @@ class pantiltTargetTrackerApp(object):
             time.sleep(1)
             self.image_sub = None
           self.msg_if.pub_info(" Subscribing to Image topic : " + image_topic)
-          self.image_sub = rospy.Subscriber(image_topic, Image, self.imageCb, queue_size = 1)
+          self.image_sub = self.nepi_ros.create_subscriber(image_topic, Image, self.imageCb, queue_size = 1)
         else:
           self.last_image_topic = ""
 
@@ -661,7 +911,7 @@ class pantiltTargetTrackerApp(object):
     # Check class selection
     class_sel = False
     #self.msg_if.pub_warn("sel class: " + sel_class)
-    selected_class = nepi_ros.get_param(self,'~selected_class',  self.init_selected_class)
+    selected_class = self.node_if.get_param('selected_class')
     if len(self.classes_list) > 0:
       if selected_class  in self.classes_list:
         class_sel = True
@@ -676,19 +926,19 @@ class pantiltTargetTrackerApp(object):
       #self.msg_if.pub_warn("Publishing Not Enabled image")
       if not nepi_ros.is_shutdown():
         self.app_ne_img.header.stamp = nepi_ros.ros_time_now()
-        self.image_pub.publish(self.app_ne_img)
+        self.node_if.publish_pub('image_pub', self.app_ne_img)
     elif self.pt_connected == False:
       if not nepi_ros.is_shutdown():
         self.no_class_img.header.stamp = nepi_ros.ros_time_now()
-        self.image_pub.publish(self.no_pt_img)
+        self.node_if.publish_pub('image_pub', self.no_pt_img)
     elif self.detector_running == False:
       if not nepi_ros.is_shutdown():
         self.detector_nr_img.header.stamp = nepi_ros.ros_time_now()
-        self.image_pub.publish(self.detector_nr_img)
+        self.node_if.publish_pub('image_pub', self.detector_nr_img)
     elif self.class_selected == False:
       if not nepi_ros.is_shutdown():
         self.no_class_img.header.stamp = nepi_ros.ros_time_now()
-        self.image_pub.publish(self.no_class_img)
+        self.node_if.publish_pub('image_pub', self.no_class_img)
 
     # Update status app msg
     self.app_msg = app_msg
@@ -734,7 +984,7 @@ class pantiltTargetTrackerApp(object):
           '''
           ptx_capabilities_service_topic = ptx_namespace + "capabilities_query"
           try:
-            ptx_caps_service = rospy.ServiceProxy(ptx_capabilities_service_topic, PTXCapabilitiesQuery)
+            ptx_caps_service = nepi_ros.connect_service(ptx_capabilities_service_topic, PTXCapabilitiesQuery)
             time.sleep(1)
             ptx_caps = ptx_caps_service()
             self.has_position_feedback = ptx_caps.absolute_positioning
@@ -745,19 +995,19 @@ class pantiltTargetTrackerApp(object):
             self.has_adjustable_speed =  False
           '''
           ## Create Publishers
-          self.send_pt_home_pub = rospy.Publisher(PTX_GOHOME_TOPIC, Empty, queue_size=10)
-          self.set_pt_speed_ratio_pub = rospy.Publisher(PTX_SET_SPEED_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_position_pub = rospy.Publisher(PTX_JOG_POSITION_TOPIC, PanTiltPosition, queue_size=10)
-          self.set_pt_pan_ratio_pub = rospy.Publisher(PTX_GOTO_PAN_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_tilt_ratio_pub = rospy.Publisher(PTX_GOTO_TILT_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_pan_jog_pub = rospy.Publisher(PTX_JOG_PAN_TOPIC, SingleAxisTimedMove, queue_size=10)
-          self.set_pt_tilt_jog_pub = rospy.Publisher(PTX_JOG_TILT_TOPIC, SingleAxisTimedMove, queue_size=10)
-          self.set_pt_soft_limits_pub = rospy.Publisher(PTX_SET_SOFT_LIMITS_TOPIC, PanTiltLimits, queue_size=10)
-          self.pt_stop_motion_pub = rospy.Publisher(PTX_STOP_TOPIC, Empty, queue_size=10)
+          self.send_pt_home_pub = self.nepi_ros.create_publisher(PTX_GOHOME_TOPIC, Empty, queue_size=10)
+          self.set_pt_speed_ratio_pub = self.nepi_ros.create_publisher(PTX_SET_SPEED_RATIO_TOPIC, Float32, queue_size=10)
+          self.set_pt_position_pub = self.nepi_ros.create_publisher(PTX_JOG_POSITION_TOPIC, PanTiltPosition, queue_size=10)
+          self.set_pt_pan_ratio_pub = self.nepi_ros.create_publisher(PTX_GOTO_PAN_RATIO_TOPIC, Float32, queue_size=10)
+          self.set_pt_tilt_ratio_pub = self.nepi_ros.create_publisher(PTX_GOTO_TILT_RATIO_TOPIC, Float32, queue_size=10)
+          self.set_pt_pan_jog_pub = self.nepi_ros.create_publisher(PTX_JOG_PAN_TOPIC, SingleAxisTimedMove, queue_size=10)
+          self.set_pt_tilt_jog_pub = self.nepi_ros.create_publisher(PTX_JOG_TILT_TOPIC, SingleAxisTimedMove, queue_size=10)
+          self.set_pt_soft_limits_pub = self.nepi_ros.create_publisher(PTX_SET_SOFT_LIMITS_TOPIC, PanTiltLimits, queue_size=10)
+          self.pt_stop_motion_pub = self.nepi_ros.create_publisher(PTX_STOP_TOPIC, Empty, queue_size=10)
           time.sleep(1)
           ## Create Subscribers
           self.msg_if.pub_info("Subscribing to PTX Status Msg: " + self.pt_status_topic)
-          self.pt_status_sub = rospy.Subscriber(self.pt_status_topic, PanTiltStatus, self.ptStatusCb, queue_size = 1)
+          self.pt_status_sub = self.nepi_ros.create_subscriber(self.pt_status_topic, PanTiltStatus, self.ptStatusCb, queue_size = 1)
           #self.pt_connected = True # Set in pt_status callback
       else:
         self.pt_namespace = "None"
@@ -814,7 +1064,7 @@ class pantiltTargetTrackerApp(object):
   def appEnableCb(self,msg):
     #self.msg_if.pub_info(msg)
     val = msg.data
-    nepi_ros.set_param(self,'~app_enabled',val)
+    self.node_if.set_param('app_enabled',val)
     self.publish_status()
 
 
@@ -823,7 +1073,7 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     selected_class = msg.data
     if selected_class in self.classes_list or selected_class == "None":
-      nepi_ros.set_param(self,'~selected_class',  selected_class)
+      self.node_if.set_param('selected_class',  selected_class)
     self.publish_status()
     self.updater()
     
@@ -835,7 +1085,7 @@ class pantiltTargetTrackerApp(object):
       pt_topic == ""
     if pt_topic != "":
       pt_topic = nepi_ros.find_topic(pt_topic)
-    nepi_ros.set_param(self,'~pt_namespace',  pt_topic)
+    self.node_if.set_param('pt_namespace',  pt_topic)
     self.publish_status()
     self.updater()
 
@@ -844,7 +1094,7 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     fov = msg.data
     if fov > 0:
-      nepi_ros.set_param(self,'~image_fov_vert',  fov)
+      self.node_if.set_param('image_fov_vert',  fov)
     self.publish_status()
 
 
@@ -852,7 +1102,7 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     fov = msg.data
     if fov > 0:
-      nepi_ros.set_param(self,'~image_fov_horz',  fov)
+      self.node_if.set_param('image_fov_horz',  fov)
     self.publish_status()
 
 
@@ -863,7 +1113,7 @@ class pantiltTargetTrackerApp(object):
       val = self.MIN_TRACK_UPDATE_RATE
     if val > self.MAX_TRACK_UPDATE_RATE:
       val = self.MAX_TRACK_UPDATE_RATE
-      nepi_ros.set_param(self,'~track_update_rate',  val)
+      self.node_if.set_param('track_update_rate',  val)
     self.publish_status()
 
   def setTargetQLenCb(self,msg):
@@ -873,7 +1123,7 @@ class pantiltTargetTrackerApp(object):
       val = 1
     if val > 20:
       val = 20
-    nepi_ros.set_param(self,'~target_q_len',  val)
+    self.node_if.set_param('target_q_len',  val)
     self.publish_status()
 
   def setTargetLLenCb(self,msg):
@@ -883,7 +1133,7 @@ class pantiltTargetTrackerApp(object):
       val = 1
     if val > 20:
       val = 20
-    nepi_ros.set_param(self,'~target_l_len',  val)
+    self.node_if.set_param('target_l_len',  val)
     self.publish_status()
 
 
@@ -891,14 +1141,14 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     val = msg.data
     if val >= 0 and val <= 1:
-      nepi_ros.set_param(self,'~min_area_ratio',  val)
+      self.node_if.set_param('min_area_ratio',  val)
     self.publish_status()
 
   def setScanSpeedCb(self,msg):
     ##self.msg_if.pub_info(msg)
     val = msg.data
     if val >= 0 and val <= 1:
-      nepi_ros.set_param(self,'~scan_speed_ratio',  val)
+      self.node_if.set_param('scan_speed_ratio',  val)
     self.publish_status()
 
   def setScanTiltOffsetCb(self,msg):
@@ -908,7 +1158,7 @@ class pantiltTargetTrackerApp(object):
     min_tilt = nepi_ros.get_param(self,"~min_tilt_angle",self.init_min_tilt)
     max_tilt = nepi_ros.get_param(self,"~max_tilt_angle",self.init_max_tilt)
     if val >= min_tilt and val <= max_tilt:
-      nepi_ros.set_param(self,'~scan_tilt_offset',  val)
+      self.node_if.set_param('scan_tilt_offset',  val)
     self.publish_status()
 
   def setMinMaxPanCb(self,msg):
@@ -934,7 +1184,7 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     val = msg.data
     if val >= 0 and val <= 1:
-      nepi_ros.set_param(self,'~track_speed_ratio',  val)
+      self.node_if.set_param('track_speed_ratio',  val)
     self.publish_status()
 
   def setTrackTiltOffsetCb(self,msg):
@@ -945,7 +1195,7 @@ class pantiltTargetTrackerApp(object):
     min_tilt = nepi_ros.get_param(self,"~min_tilt_angle",self.init_min_tilt)
     max_tilt = nepi_ros.get_param(self,"~max_tilt_angle",self.init_max_tilt)
     if val >= min_tilt and val <= max_tilt:
-      nepi_ros.set_param(self,'~track_tilt_offset',  val)
+      self.node_if.set_param('track_tilt_offset',  val)
     self.publish_status()
 
   def setErrorGoalCb(self,msg):
@@ -955,7 +1205,7 @@ class pantiltTargetTrackerApp(object):
       val = self.MIN_MAX_ERROR_GOAL[0]
     if val > self.MIN_MAX_ERROR_GOAL[1]:
       val = self.MIN_MAX_ERROR_GOAL[1]
-    nepi_ros.set_param(self,'~error_goal',  val)
+    self.node_if.set_param('error_goal',  val)
     self.publish_status()
   #######################
   ### PT Callbacks
@@ -1050,18 +1300,18 @@ class pantiltTargetTrackerApp(object):
                   encode = 'mono8'
                 img_out_msg = nepi_img.cv2img_to_rosimg(cv2_img, encoding=encode)
                 img_out_msg.header.stamp = ros_timestamp
-                self.image_pub.publish(img_out_msg)
+                self.node_if.publish_pub('image_pub', img_out_msg)
             # Save Data if Time
             if should_save:
               nepi_save.save_img2file(self,data_product,cv2_img,ros_timestamp,save_check = False)
           else:
               if not nepi_ros.is_shutdown() and has_subscribers:
-                self.image_pub.publish(img_msg)
+                self.node_if.publish_pub('image_pub', img_msg)
 
   ### If object(s) detected, save bounding box info to global
   def objectDetectedCb(self,bounding_boxes_msg):
     app_enabled = nepi_ros.get_param(self,"~app_enabled", self.init_app_enabled)
-    selected_class = selected_class = nepi_ros.get_param(self,'~selected_class',  self.init_selected_class)
+    selected_class = selected_class = self.node_if.get_param('selected_class')
     target_q_len = nepi_ros.get_param(self,"~target_q_len",self.init_target_q_len)
     target_l_len = nepi_ros.get_param(self,"~target_l_len",self.init_target_l_len)
     min_area_ratio =  nepi_ros.get_param(self,"~min_area_ratio",self.init_min_area_ratio)
@@ -1183,7 +1433,7 @@ class pantiltTargetTrackerApp(object):
 
         if self.has_adjustable_speed == True and self.cur_speed_ratio != scan_speed_ratio:
           try:
-            self.set_pt_speed_ratio_pub.publish(scan_speed_ratio)
+            self.node_if.publish_pub('set_pt_speed_ratio_pub', scan_speed_ratio)
           except:
             pass
 
@@ -1194,7 +1444,7 @@ class pantiltTargetTrackerApp(object):
             pan_tilt_pos_msg.yaw_deg = max_pan
             pan_tilt_pos_msg.pitch_deg = scan_tilt_offset
             try:
-             self.set_pt_position_pub.publish(pan_tilt_pos_msg)
+             self.node_if.publish_pub('set_pt_position_pub', pan_tilt_pos_msg)
              self.pan_tilt_goal_deg = [pan_tilt_pos_msg.yaw_deg,pan_tilt_pos_msg.pitch_deg]
              self.current_scan_dir = 1
              self.publish_status()
@@ -1208,7 +1458,7 @@ class pantiltTargetTrackerApp(object):
             pan_tilt_pos_msg.yaw_deg = min_pan
             pan_tilt_pos_msg.pitch_deg = scan_tilt_offset
             try:
-              self.set_pt_position_pub.publish(pan_tilt_pos_msg)
+              self.node_if.publish_pub('set_pt_position_pub', pan_tilt_pos_msg)
               self.pan_tilt_goal_deg = [pan_tilt_pos_msg.yaw_deg,pan_tilt_pos_msg.pitch_deg]
               self.current_scan_dir = -1
               self.publish_status()
@@ -1223,7 +1473,7 @@ class pantiltTargetTrackerApp(object):
               pan_tilt_pos_msg.yaw_deg = max_pan
               pan_tilt_pos_msg.pitch_deg = tilt_cur
               try:
-                self.set_pt_position_pub.publish(pan_tilt_pos_msg)
+                self.node_if.publish_pub('set_pt_position_pub', pan_tilt_pos_msg)
                 self.pan_tilt_goal_deg = [pan_tilt_pos_msg.yaw_deg,pan_tilt_pos_msg.pitch_deg]
                 self.publish_status()
               except:
@@ -1235,7 +1485,7 @@ class pantiltTargetTrackerApp(object):
               pan_tilt_pos_msg.yaw_deg = min_pan
               pan_tilt_pos_msg.pitch_deg = scan_tilt_offset
               try:
-                self.set_pt_position_pub.publish(pan_tilt_pos_msg)
+                self.node_if.publish_pub('set_pt_position_pub', pan_tilt_pos_msg)
                 self.pan_tilt_goal_deg = [pan_tilt_pos_msg.yaw_deg,pan_tilt_pos_msg.pitch_deg]
                 self.publish_status()
               except:
@@ -1253,7 +1503,7 @@ class pantiltTargetTrackerApp(object):
         self.is_scanning = False
         self.start_scanning = True
 
-        track_delay = float(1)/nepi_ros.get_param(self,'~track_update_rate',  self.init_track_update_rate)
+        track_delay = float(1)/self.node_if.get_param('track_update_rate')
         ros_time_now = time.time()
         if (ros_time_now - self.last_track_time + self.SCAN_TRACK_PROCESS_DELAY) > track_delay:
           self.last_track_time = ros_time_now 
@@ -1262,7 +1512,7 @@ class pantiltTargetTrackerApp(object):
           track_tilt_offset = nepi_ros.get_param(self,"~track_tilt_offset", self.init_track_tilt_offset)         
           if self.has_adjustable_speed == True and self.cur_speed_ratio != track_speed_ratio:
             try:
-              self.set_pt_speed_ratio_pub.publish(track_speed_ratio)
+              self.node_if.publish_pub('set_pt_speed_ratio_pub', track_speed_ratio)
             except:
               pass
           #self.msg_if.pub_warn("Error Goal set to: " + str(error_goal))
@@ -1324,7 +1574,7 @@ class pantiltTargetTrackerApp(object):
                 pt_pos_msg.pitch_deg = tilt_to_goal
                 if not nepi_ros.is_shutdown():
                   try:
-                    self.set_pt_position_pub.publish(pt_pos_msg)   
+                    self.node_if.publish_pub('set_pt_position_pub', pt_pos_msg)   
                     self.pan_tilt_goal_deg = [pan_to_goal,tilt_to_goal]
                   except:
                     self.msg_if.pub_warn("Tracking to excpetion: " + str(e))
@@ -1343,7 +1593,7 @@ class pantiltTargetTrackerApp(object):
       tracking_error_msg.pitch_cur_deg = pt_status_msg.pitch_now_deg
       tracking_error_msg.pitch_error_deg = self.pan_tilt_errors_deg[1]
       tracking_error_msg.pitch_goal_deg = self.pan_tilt_goal_deg[1]
-      self.tracking_error_pub.publish(tracking_error_msg)
+      self.node_if.publish_pub('tracking_error_pub', tracking_error_msg)
 
 
 
@@ -1353,8 +1603,8 @@ class pantiltTargetTrackerApp(object):
       target_horz_angle_deg = 0
       if self.img_height != 0 and self.img_width != 0:
         # Iterate over all of the objects and calculate range and bearing data
-        image_fov_vert = nepi_ros.get_param(self,'~image_fov_vert',  self.init_image_fov_vert)
-        image_fov_horz = nepi_ros.get_param(self,'~image_fov_horz', self.init_image_fov_horz)
+        image_fov_vert = self.node_if.get_param('image_fov_vert')
+        image_fov_horz = self.node_if.get_param('image_fov_horz')
         box_y = box.ymin + (box.ymax - box.ymin)
         box_x = box.xmin + (box.xmax - box.xmin)
         box_center = [box_y,box_x]
