@@ -221,83 +221,85 @@ class pantiltTargetTrackerApp(object):
             'namespace': self.node_namespace
     }
 
+
+
     # Params Config Dict ####################
     self.PARAMS_DICT = {
         'app_enabled': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_app_enabled
+            'factory_val': False
         },
         'selected_detector': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_selected_detector
+            'factory_val': ''
         },
         'image_fov_vert': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_image_fov_vert,
+            'factory_val': self.FACTORY_FOV_VERT_DEG
         },
         'image_fov_horz': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_image_fov_horz
+            'factory_val': self.FACTORY_FOV_HORZ_DEG
         },
         'selected_class': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_selected_class
+            'factory_val': "None"
         },
         'target_q_len': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_target_q_len
+            'factory_val': self.FACTORY_TARGET_Q_LEN
         },
         'target_l_len': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_target_l_len
+            'factory_val': self.FACTORY_TARGET_L_LEN
         },
         'min_ratio': {
             'namespace': self.node_namespace,
-            'factory_val': self.FACTORY_MIN_AREA_RATIO
+            'factory_val':self.FACTORY_MIN_AREA_RATIO
         },
         'pt_namespace': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_pt_namespace
+            'factory_val': "None"
         },
         'track_update_rate': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_track_update_rate
+            'factory_val': self.FACTORY_TRACK_UPDATE_RATE
         },
         'scan_speed_ratio': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_scan_speed_ratio
+            'factory_val': self.FACTORY_SCAN_SPEED_RATIO
         },
         'scan_tilt_offset': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_scan_tilt_offset
+            'factory_val': self.FACTORY_SCAN_TILT_DEG
         },
         'min_pan_angle': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_min_pan
+            'factory_val': self.FACTORY_MIN_MAX_PAN_ANGLES[0]
         },
         'max_pan_angle': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_max_pan
+            'factory_val': self.FACTORY_MIN_MAX_PAN_ANGLES[1]
         },
         'min_tilt_angle': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_min_tilt
+            'factory_val': self.FACTORY_MIN_MAX_TILT_ANGLES[0]
         },
         'max_tilt_angle': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_max_tilt
+            'factory_val': self.FACTORY_MIN_MAX_TILT_ANGLES[1]
         },
         'track_speed_ratio': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_track_speed_ratio
+            'factory_val': self.FACTORY_TRACK_SPEED_RATIO
         },
         'track_tilt_offset': {
             'namespace': self.node_namespace,
-            'factory_val': self.init_track_tilt_offset
+            'factory_val': self.FACTORY_TRACK_TILT_OFFSET_DEG
         },
         'error_goal': {
             'namespace': self.node_namespace,
-            'factory_val': [] self.init_error_goal
+            'factory_val': self.FACTORY_ERROR_GOAL_DEG
         }
     }
 
@@ -684,29 +686,29 @@ class pantiltTargetTrackerApp(object):
       status_msg.tilt_min_max_deg = [-180,180]
 
 
-    min_pan = nepi_ros.get_param(self,"~min_pan_angle",self.init_min_pan)
-    max_pan = nepi_ros.get_param(self,"~max_pan_angle",self.init_max_pan)
+    min_pan = self.node_if.get_param("min_pan_angle")
+    max_pan = self.node_if.get_param("max_pan_angle")
     status_msg.set_pan_min_max_deg = [min_pan,max_pan]
 
-    min_tilt = nepi_ros.get_param(self,"~min_tilt_angle",self.init_min_tilt)
-    max_tilt = nepi_ros.get_param(self,"~max_tilt_angle",self.init_max_tilt)
+    min_tilt = self.node_if.get_param("min_tilt_angle")
+    max_tilt = self.node_if.get_param("max_tilt_angle")
     status_msg.set_tilt_min_max_deg = [min_tilt,max_tilt]
     
 
-    status_msg.track_update_rate_hz = nepi_ros.get_param(self,"~track_update_rate",self.init_track_update_rate)
-    status_msg.min_area_ratio = nepi_ros.get_param(self,"~min_area_ratio",self.init_min_area_ratio)
-    status_msg.scan_speed_ratio = nepi_ros.get_param(self,"~scan_speed_ratio",self.init_scan_speed_ratio)
-    status_msg.scan_tilt_offset = nepi_ros.get_param(self,"~scan_tilt_offset",self.init_scan_tilt_offset)
+    status_msg.track_update_rate_hz = self.node_if.get_param("track_update_rate")
+    status_msg.min_area_ratio = self.node_if.get_param("min_area_ratio")
+    status_msg.scan_speed_ratio = self.node_if.get_param("scan_speed_ratio")
+    status_msg.scan_tilt_offset = self.node_if.get_param("scan_tilt_offset")
 
-    status_msg.track_speed_ratio = nepi_ros.get_param(self,"~track_speed_ratio",self.init_track_speed_ratio)
-    status_msg.track_tilt_offset = nepi_ros.get_param(self,"~track_tilt_offset", self.init_track_tilt_offset)
+    status_msg.track_speed_ratio = self.node_if.get_param("track_speed_ratio")
+    status_msg.track_tilt_offset = self.node_if.get_param("track_tilt_offset")
 
     status_msg.error_goal_min_max_deg = self.MIN_MAX_ERROR_GOAL
-    status_msg.error_goal_deg = nepi_ros.get_param(self,"~error_goal",self.init_error_goal)
+    status_msg.error_goal_deg = self.node_if.get_param("error_goal")
 
 
-    status_msg.target_queue_len = nepi_ros.get_param(self,"~target_q_len",self.init_target_q_len)
-    status_msg.target_lost_len = nepi_ros.get_param(self,"~target_l_len",self.init_target_l_len)
+    status_msg.target_queue_len = self.node_if.get_param("target_q_len")
+    status_msg.target_lost_len = self.node_if.get_param("target_l_len")
 
     self.target_box_q_lock.acquire()
     box_q = copy.deepcopy(self.target_box_q)      
@@ -729,13 +731,13 @@ class pantiltTargetTrackerApp(object):
     # Save last image topic for next check
     self.last_image_topic = self.current_image_topic
     ############## DEBUG
-    #nepi_ros.set_param(self,"~app_enabled",True)
-    #nepi_ros.set_param(self,"~pt_namespace","/nepi/s2x/iqr_pan_tilt/ptx")
-    #nepi_ros.set_param(self,"~selected_class","person")
+    #self.node_if.set_param("app_enabled",True)
+    #self.node_if.set_param("pt_namespace","/nepi/s2x/iqr_pan_tilt/ptx")
+    #self.node_if.set_param("selected_class","person")
     ############## DEBUG
 
     update_status = False
-    app_enabled = nepi_ros.get_param(self,"~app_enabled", self.init_app_enabled)
+    app_enabled = self.node_if.get_param("app_enabled")
 
     app_msg = ""
     #self.msg_if.pub_warn("Running app update process with app enabled: " + str(app_enabled))
@@ -1103,8 +1105,8 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     val = msg.data
 
-    min_tilt = nepi_ros.get_param(self,"~min_tilt_angle",self.init_min_tilt)
-    max_tilt = nepi_ros.get_param(self,"~max_tilt_angle",self.init_max_tilt)
+    min_tilt = self.node_if.get_param("min_tilt_angle")
+    max_tilt = self.node_if.get_param("max_tilt_angle")
     if val >= min_tilt and val <= max_tilt:
       self.node_if.set_param('scan_tilt_offset',  val)
     self.publish_status()
@@ -1114,8 +1116,8 @@ class pantiltTargetTrackerApp(object):
     max_pan = msg.stop_range
     ##self.msg_if.pub_info(msg)
     if min_pan >= -180 and max_pan <= 180 and min_pan < max_pan:
-      nepi_ros.set_param(self,"~min_pan_angle",min_pan)
-      nepi_ros.set_param(self,"~max_pan_angle",max_pan)
+      self.node_if.set_param("min_pan_angle",min_pan)
+      self.node_if.set_param("max_pan_angle",max_pan)
     self.publish_status()
 
   def setMinMaxTiltCb(self,msg):
@@ -1123,8 +1125,8 @@ class pantiltTargetTrackerApp(object):
     max_tilt = msg.stop_range
     ##self.msg_if.pub_info(msg)
     if min_tilt >= -180 and max_tilt <= 180 and min_tilt < max_tilt:
-      nepi_ros.set_param(self,"~min_tilt_angle",min_tilt)
-      nepi_ros.set_param(self,"~max_tilt_angle",max_tilt)
+      self.node_if.set_param("min_tilt_angle",min_tilt)
+      self.node_if.set_param("max_tilt_angle",max_tilt)
     self.publish_status()
 
 
@@ -1138,10 +1140,10 @@ class pantiltTargetTrackerApp(object):
   def setTrackTiltOffsetCb(self,msg):
     ##self.msg_if.pub_info(msg)
     val = msg.data
-    min_pan = nepi_ros.get_param(self,"~min_pan_angle",self.init_min_pan)
-    max_pan = nepi_ros.get_param(self,"~max_pan_angle",self.init_max_pan)
-    min_tilt = nepi_ros.get_param(self,"~min_tilt_angle",self.init_min_tilt)
-    max_tilt = nepi_ros.get_param(self,"~max_tilt_angle",self.init_max_tilt)
+    min_pan = self.node_if.get_param("min_pan_angle")
+    max_pan = self.node_if.get_param("max_pan_angle")
+    min_tilt = self.node_if.get_param("min_tilt_angle")
+    max_tilt = self.node_if.get_param("max_tilt_angle")
     if val >= min_tilt and val <= max_tilt:
       self.node_if.set_param('track_tilt_offset',  val)
     self.publish_status()
@@ -1170,26 +1172,26 @@ class pantiltTargetTrackerApp(object):
 
     pan_min = pt_status_msg.yaw_min_softstop_deg
     pan_max = pt_status_msg.yaw_max_softstop_deg
-    min_pan = nepi_ros.get_param(self,"~min_pan_angle",self.init_min_pan)
-    max_pan = nepi_ros.get_param(self,"~max_pan_angle",self.init_max_pan)
+    min_pan = self.node_if.get_param("min_pan_angle")
+    max_pan = self.node_if.get_param("max_pan_angle")
     if min_pan < pan_min:
       min_pan = pan_min
     if max_pan > pan_max:
       max_pan = pan_max
-    nepi_ros.set_param(self,"~min_pan_angle",min_pan)
-    nepi_ros.set_param(self,"~max_pan_angle",max_pan)
+    self.node_if.set_param("min_pan_angle",min_pan)
+    self.node_if.set_param("max_pan_angle",max_pan)
     
 
     tilt_min = pt_status_msg.pitch_min_softstop_deg
     tilt_max = pt_status_msg.pitch_max_softstop_deg
-    min_tilt = nepi_ros.get_param(self,"~min_tilt_angle",self.init_min_tilt)
-    max_tilt = nepi_ros.get_param(self,"~max_tilt_angle",self.init_max_tilt)
+    min_tilt = self.node_if.get_param("min_tilt_angle")
+    max_tilt = self.node_if.get_param("max_tilt_angle")
     if min_tilt < tilt_min:
       min_tilt = tilt_min
     if max_tilt > tilt_max:
       max_tilt = tilt_max
-    nepi_ros.set_param(self,"~min_tilt_angle",min_tilt)
-    nepi_ros.set_param(self,"~max_tilt_angle",max_tilt)
+    self.node_if.set_param("min_tilt_angle",min_tilt)
+    self.node_if.set_param("max_tilt_angle",max_tilt)
 
     self.has_position_feedback = pt_status_msg.has_position_feedback
     self.has_adjustable_speed =  pt_status_msg.has_adjustable_speed
@@ -1203,7 +1205,7 @@ class pantiltTargetTrackerApp(object):
 
   def imagePubCb(self,timer):
     data_product = 'tracking_image'
-    app_enabled = nepi_ros.get_param(self,"~app_enabled", self.init_app_enabled)
+    app_enabled = self.node_if.get_param("app_enabled")
     if app_enabled and self.image_if is not None and self.detector_running and self.class_selected and self.pt_connected:
       has_subscribers = self.image_if.has_subscribers_check()
       #self.msg_if.pub_warn("Checking for subscribers: " + str(has_subscribers))
@@ -1251,11 +1253,11 @@ class pantiltTargetTrackerApp(object):
 
   ### If object(s) detected, save bounding box info to global
   def objectDetectedCb(self,bounding_boxes_msg):
-    app_enabled = nepi_ros.get_param(self,"~app_enabled", self.init_app_enabled)
+    app_enabled = self.node_if.get_param("app_enabled")
     selected_class = selected_class = self.node_if.get_param('selected_class')
-    target_q_len = nepi_ros.get_param(self,"~target_q_len",self.init_target_q_len)
-    target_l_len = nepi_ros.get_param(self,"~target_l_len",self.init_target_l_len)
-    min_area_ratio =  nepi_ros.get_param(self,"~min_area_ratio",self.init_min_area_ratio)
+    target_q_len = self.node_if.get_param("target_q_len")
+    target_l_len = self.node_if.get_param("target_l_len")
+    min_area_ratio =  self.node_if.get_param("min_area_ratio")
     ros_timestamp = bounding_boxes_msg.header.stamp
     bb_list = bounding_boxes_msg.bounding_boxes
     self.img_height = bounding_boxes_msg.image_height
@@ -1306,7 +1308,7 @@ class pantiltTargetTrackerApp(object):
 
   ### Monitor Output of AI detector to clear detection status
   def foundObjectCb(self,found_obj_msg):
-    target_l_len = nepi_ros.get_param(self,"~target_l_len",self.init_target_l_len)
+    target_l_len = self.node_if.get_param("target_l_len")
     #Clean Up
     if found_obj_msg.count == 0:      
       self.target_box_lock.acquire()
@@ -1328,7 +1330,7 @@ class pantiltTargetTrackerApp(object):
     self.pt_status_msg_lock.release()    
     was_tracking = copy.deepcopy(self.is_tracking)
     was_scanning = copy.deepcopy(self.is_scanning)
-    app_enabled = nepi_ros.get_param(self,"~app_enabled", self.init_app_enabled)
+    app_enabled = self.node_if.get_param("app_enabled")
     if app_enabled == False or self.pt_connected == False or pt_status_msg is None:
       #self.msg_if.pub_warn("Scan Track process not ready")
       self.target_detected=False
@@ -1342,10 +1344,10 @@ class pantiltTargetTrackerApp(object):
       box_q = copy.deepcopy(self.target_box_q)      
       self.target_box_q_lock.release()
 
-      min_pan = nepi_ros.get_param(self,"~min_pan_angle",self.init_min_pan)
-      max_pan = nepi_ros.get_param(self,"~max_pan_angle",self.init_max_pan)
-      min_tilt = nepi_ros.get_param(self,"~min_tilt_angle",self.init_min_tilt)
-      max_tilt = nepi_ros.get_param(self,"~max_tilt_angle",self.init_max_tilt)
+      min_pan = self.node_if.get_param("min_pan_angle")
+      max_pan = self.node_if.get_param("max_pan_angle")
+      min_tilt = self.node_if.get_param("min_tilt_angle")
+      max_tilt = self.node_if.get_param("max_tilt_angle")
 
       tilt_cur = pt_status_msg.pitch_now_deg
       tilt_goal = pt_status_msg.pitch_goal_deg
@@ -1362,15 +1364,15 @@ class pantiltTargetTrackerApp(object):
         if was_scanning == False:
           self.start_scanning = True
           self.publish_status()
-        scan_speed_ratio = nepi_ros.get_param(self,"~scan_speed_ratio",self.init_scan_speed_ratio)
-        scan_tilt_offset = nepi_ros.get_param(self,"~scan_tilt_offset",self.init_scan_tilt_offset)
+        scan_speed_ratio = self.node_if.get_param("scan_speed_ratio")
+        scan_tilt_offset = self.node_if.get_param("scan_tilt_offset")
         
         # Check tilt limits
         if scan_tilt_offset < min_tilt:
           scan_tilt_offset = min_tilt
         if scan_tilt_offset > max_tilt:
           scan_tilt_offset = max_tilt
-        nepi_ros.set_param(self,"~scan_tilt_offset",scan_tilt_offset)
+        self.node_if.set_param("scan_tilt_offset",scan_tilt_offset)
 
         if self.has_adjustable_speed == True and self.cur_speed_ratio != scan_speed_ratio:
           try:
@@ -1448,9 +1450,9 @@ class pantiltTargetTrackerApp(object):
         ros_time_now = time.time()
         if (ros_time_now - self.last_track_time + self.SCAN_TRACK_PROCESS_DELAY) > track_delay:
           self.last_track_time = ros_time_now 
-          error_goal = nepi_ros.get_param(self,"~error_goal",self.init_error_goal)
-          track_speed_ratio = nepi_ros.get_param(self,"~track_speed_ratio",self.init_track_speed_ratio)
-          track_tilt_offset = nepi_ros.get_param(self,"~track_tilt_offset", self.init_track_tilt_offset)         
+          error_goal = self.node_if.get_param("error_goal")
+          track_speed_ratio = self.node_if.get_param("track_speed_ratio")
+          track_tilt_offset = self.node_if.get_param("track_tilt_offset")         
           if self.has_adjustable_speed == True and self.cur_speed_ratio != track_speed_ratio:
             try:
               self.node_if.publish_pub('set_pt_speed_ratio_pub', track_speed_ratio)
