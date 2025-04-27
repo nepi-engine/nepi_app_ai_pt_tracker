@@ -31,8 +31,6 @@ import cv2
 
 from nepi_sdk import nepi_ros 
 from nepi_sdk import nepi_utils
-from nepi_sdk import nepi_msg
-from nepi_sdk import nepi_save
 from nepi_sdk import nepi_img
 
 from std_msgs.msg import Bool, UInt8, Empty, Int32,Float32, String
@@ -51,8 +49,9 @@ from nepi_app_ai_pt_tracker.msg import AiPtTrackerStatus , TrackingErrors
 from nepi_api.node_if import NodeClassIF
 from nepi_api.connect_node_if import ConnectNodeClassIF
 from nepi_api.messages_if import MsgIF
-from nepi_api.sys_if_save_data import SaveDataIF
-from nepi_api.sys_if_save_cfg import SaveCfgIF
+from nepi_api.system_if import SaveDataIF
+from nepi_api.system_if import SaveCfgIF
+from nepi_api.data_if import ImageIF
 
 
 #########################################
@@ -174,8 +173,6 @@ class pantiltTargetTrackerApp(object):
   pan_tilt_goal_deg = [0.0,0.0]
 
 
-  img_has_subs = False
-
   last_app_enabled = False
 
   #######################
@@ -193,57 +190,26 @@ class pantiltTargetTrackerApp(object):
     self.msg_if = MsgIF(log_name = self.class_name)
     self.msg_if.pub_info("Starting IF Initialization Processes")
 
-    ##############################      
+    ##############################     
+    # Initialize Class Variables
+
    
     # Message Image to publish when detector not running
     message = "TARGETING NOT ENABLED"
-    cv2_img = nepi_img.create_message_image(message)
-    self.app_ne_img = nepi_img.cv2img_to_rosimg(cv2_img)
-    self.app_ne_img.header.stamp = nepi_ros.ros_time_now()
-    self.node_if.publish_pub('image_pub', self.app_ne_img)
+    self.app_ne_img = nepi_img.create_message_image(message)
 
     message = "WAITING FOR AI DETECTOR TO START"
-    cv2_img = nepi_img.create_message_image(message)
-    self.detector_nr_img = nepi_img.cv2img_to_rosimg(cv2_img)
+    self.detector_nr_img = nepi_img.create_message_image(message)
 
     message = "WAITING FOR TARGET CLASS SELECTION"
-    cv2_img = nepi_img.create_message_image(message)
-    self.no_class_img = nepi_img.cv2img_to_rosimg(cv2_img)
+     self.no_class_img = nepi_img.create_message_image(message)
 
     message = "WAITING FOR PANTILT SELECTION"
-    cv2_img = nepi_img.create_message_image(message)
-    self.no_pt_img = nepi_img.cv2img_to_rosimg(cv2_img)
+    self.no_pt_img = nepi_img.create_message_image(message)
 
 
 
-
-    self.node_if.set_param('image_fov_vert',  self.FACTORY_FOV_VERT_DEG)
-    self.node_if.set_param('image_fov_horz', self.FACTORY_FOV_HORZ_DEG)
-
-    self.node_if.set_param('selected_detector', "")
-    nepi_ros.set_param(self,"~selected_class","None")
-    nepi_ros.set_param(self,"~target_q_len",self.FACTORY_TARGET_Q_LEN)
-    nepi_ros.set_param(self,"~target_l_len",self.FACTORY_TARGET_L_LEN)
-    nepi_ros.set_param(self,"~min_ratio",self.FACTORY_MIN_AREA_RATIO)
-
-    nepi_ros.set_param(self,"~pt_namespace","None")
-    nepi_ros.set_param(self,"~track_update_rate",self.FACTORY_TRACK_UPDATE_RATE)
-    nepi_ros.set_param(self,"~scan_speed_ratio",self.FACTORY_SCAN_SPEED_RATIO)
-    nepi_ros.set_param(self,"~scan_tilt_offset",self.FACTORY_SCAN_TILT_DEG)
-
-    nepi_ros.set_param(self,"~min_pan_angle",self.FACTORY_MIN_MAX_PAN_ANGLES[0])
-    nepi_ros.set_param(self,"~max_pan_angle",self.FACTORY_MIN_MAX_PAN_ANGLES[1])
-
-    nepi_ros.set_param(self,"~min_tilt_angle",self.FACTORY_MIN_MAX_TILT_ANGLES[0])
-    nepi_ros.set_param(self,"~max_tilt_angle",self.FACTORY_MIN_MAX_TILT_ANGLES[1])
-
-    nepi_ros.set_param(self,"~track_speed_ratio",self.FACTORY_TRACK_SPEED_RATIO)
-    nepi_ros.set_param(self,"~track_tilt_offset",self.FACTORY_TRACK_TILT_OFFSET_DEG)
-    nepi_ros.set_param(self,"~error_goal",self.FACTORY_ERROR_GOAL_DEG)
-    
-    nepi_ros.set_param(self,"~app_enabled",False)
-
-     ##############################
+    ##############################
     ### Setup Node
 
     # Configs Config Dict ####################
@@ -337,7 +303,7 @@ class pantiltTargetTrackerApp(object):
 
     # Publishers Config Dict ####################
     self.PUBS_DICT = {
-        'status': {
+        'status_pub': {
             'namespace': self.node_namespace,
             'topic': 'status',
             'msg': AiPtTrackerStatus,
@@ -598,19 +564,9 @@ class pantiltTargetTrackerApp(object):
     ready = self.node_if.wait_for_ready()
 
 
+    # Setup Image IF
+    self.image_if = ImageIF(namespace = self.node_namespace, topic = 'tracking_image')
 
-        self.class_if = ConnectNodeClassIF(srvs_dict = self.SRVS_DICT,
-                        pubs_dict = self.PUBS_DICT,
-                        subs_dict = self.SUBS_DICT
-                        )
-
-    
-
-
-
-    self.status_pub = self.nepi_ros.create_publisher("~status", AiPtTrackerStatus, queue_size=1, latch=True)
-    self.tracking_error_pub = self.nepi_ros.create_publisher("~errors", TrackingErrors, queue_size=1, latch=True)
-    self.image_pub = self.nepi_ros.create_publisher("~tracking_image",Image,queue_size=1, latch = True)
     time.sleep(1)
 
     ##############################
@@ -645,6 +601,9 @@ class pantiltTargetTrackerApp(object):
 
     ##############################
     ## Start Node Processes
+
+    self.image_if.publish_cv2_image(self.app_ne_img)
+
     # Set up the timer that start scanning when no objects are detected
     self.msg_if.pub_info("Setting up processes")
     nepi_ros.timer(nepi_ros.ros_duration(self.UPDATER_PROCESS_DELAY), self.updaterCb)
@@ -758,7 +717,7 @@ class pantiltTargetTrackerApp(object):
     status_msg.is_tracking = self.is_tracking
     status_msg.pan_direction = self.current_scan_dir
 
-    self.node_if.publish_pub('image_pub', status_msg)
+    self.node_if.publish_pub('status_pub', status_msg)
 
 
         
@@ -904,9 +863,6 @@ class pantiltTargetTrackerApp(object):
             self.image_sub = None
             update_status = True
             time.sleep(1)
-    # Check for img subscribers
-    if self.image_sub is not None:
-      self.img_has_subs = (self.image_sub.get_num_connections() > 0)
 
     # Check class selection
     class_sel = False
@@ -923,22 +879,14 @@ class pantiltTargetTrackerApp(object):
 
     # Print a message image if needed
     if app_enabled == False:
-      #self.msg_if.pub_warn("Publishing Not Enabled image")
-      if not nepi_ros.is_shutdown():
-        self.app_ne_img.header.stamp = nepi_ros.ros_time_now()
-        self.node_if.publish_pub('image_pub', self.app_ne_img)
+      #self.msg_if.pub_warn("Publishing Not Enabled image"
+      self.image_if.publish_cv2_image(self.app_ne_img)
     elif self.pt_connected == False:
-      if not nepi_ros.is_shutdown():
-        self.no_class_img.header.stamp = nepi_ros.ros_time_now()
-        self.node_if.publish_pub('image_pub', self.no_pt_img)
+      self.image_if.publish_cv2_image(self.no_pt_img)
     elif self.detector_running == False:
-      if not nepi_ros.is_shutdown():
-        self.detector_nr_img.header.stamp = nepi_ros.ros_time_now()
-        self.node_if.publish_pub('image_pub', self.detector_nr_img)
+      self.image_if.publish_cv2_image(self.detector_nr_img)
     elif self.class_selected == False:
-      if not nepi_ros.is_shutdown():
-        self.no_class_img.header.stamp = nepi_ros.ros_time_now()
-        self.node_if.publish_pub('image_pub', self.no_class_img)
+      self.image_if.publish_cv2_image(self.no_class_img)
 
     # Update status app msg
     self.app_msg = app_msg
@@ -1255,14 +1203,15 @@ class pantiltTargetTrackerApp(object):
 
   def imagePubCb(self,timer):
     data_product = 'tracking_image'
-    has_subscribers = self.img_has_subs
-    #self.msg_if.pub_warn("Checking for subscribers: " + str(has_subscribers))
-    saving_is_enabled = self.save_data_if.data_product_saving_enabled(data_product)
-    snapshot_enabled = self.save_data_if.data_product_snapshot_enabled(data_product)
-    should_save = (saving_is_enabled and self.save_data_if.data_product_should_save(data_product)) or snapshot_enabled
-    #self.msg_if.pub_warn("Checking for save_: " + str(should_save))
     app_enabled = nepi_ros.get_param(self,"~app_enabled", self.init_app_enabled)
-    if app_enabled and self.image_sub is not None and self.detector_running and self.class_selected and self.pt_connected:
+    if app_enabled and self.image_if is not None and self.detector_running and self.class_selected and self.pt_connected:
+      has_subscribers = self.image_if.has_subscribers_check()
+      #self.msg_if.pub_warn("Checking for subscribers: " + str(has_subscribers))
+      saving_is_enabled = self.save_data_if.data_product_saving_enabled(data_product)
+      snapshot_enabled = self.save_data_if.data_product_snapshot_enabled(data_product)
+      should_save = (saving_is_enabled and self.save_data_if.data_product_should_save(data_product)) or snapshot_enabled
+      #self.msg_if.pub_warn("Checking for save_: " + str(should_save))
+
       if has_subscribers or should_save:
         self.img_msg_lock.acquire()
         img_msg = copy.deepcopy(self.img_msg)
@@ -1290,23 +1239,15 @@ class pantiltTargetTrackerApp(object):
             line_thickness = 2
             cv2.rectangle(cv2_img, start_point, end_point, class_color, thickness=line_thickness)
 
-            # Publish new image to ros
-            if not nepi_ros.is_shutdown() and has_subscribers: #and has_subscribers:
-                #Convert OpenCV image to ROS image
-                cv2_shape = cv2_img.shape
-                if  cv2_shape[2] == 3:
-                  encode = 'bgr8'
-                else:
-                  encode = 'mono8'
-                img_out_msg = nepi_img.cv2img_to_rosimg(cv2_img, encoding=encode)
-                img_out_msg.header.stamp = ros_timestamp
-                self.node_if.publish_pub('image_pub', img_out_msg)
+            cv2_shape = cv2_img.shape
+            if  cv2_shape[2] == 3:
+              encode = 'bgr8'
+            else:
+              encode = 'mono8'
+            self.image_if.publish_cv2_image(cv2_img, timestamp = ros_timestamp)
             # Save Data if Time
             if should_save:
-              nepi_save.save_img2file(self,data_product,cv2_img,ros_timestamp,save_check = False)
-          else:
-              if not nepi_ros.is_shutdown() and has_subscribers:
-                self.node_if.publish_pub('image_pub', img_msg)
+              self.save_data_if.save_img2file(data_product,cv2_img,ros_timestamp,save_check = False)
 
   ### If object(s) detected, save bounding box info to global
   def objectDetectedCb(self,bounding_boxes_msg):
