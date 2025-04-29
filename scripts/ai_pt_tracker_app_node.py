@@ -36,7 +36,7 @@ from nepi_sdk import nepi_img
 from std_msgs.msg import Bool, UInt8, Empty, Int32,Float32, String
 from sensor_msgs.msg import Image
 
-from nepi_ros_interfaces.msg import PanTiltLimits, PanTiltPosition, SingleAxisTimedMove, PanTiltStatus, StringArray
+from nepi_ros_interfaces.msg import PanTiltLimits, PanTiltPosition, SingleAxisTimedMove, PTXStatus, StringArray
 from nepi_ros_interfaces.srv import PTXCapabilitiesQuery
 
 from nepi_ros_interfaces.msg import BoundingBox, BoundingBoxes, ObjectCount, RangeWindow
@@ -957,7 +957,7 @@ class pantiltTargetTrackerApp(object):
           time.sleep(1)
           ## Create Subscribers
           self.msg_if.pub_info("Subscribing to PTX Status Msg: " + self.pt_status_topic)
-          self.pt_status_sub = self.nepi_ros.create_subscriber(self.pt_status_topic, PanTiltStatus, self.ptStatusCb, queue_size = 1)
+          self.pt_status_sub = self.nepi_ros.create_subscriber(self.pt_status_topic, PTXStatus, self.ptStatusCb, queue_size = 1)
           #self.pt_connected = True # Set in pt_status callback
       else:
         self.pt_namespace = "None"
