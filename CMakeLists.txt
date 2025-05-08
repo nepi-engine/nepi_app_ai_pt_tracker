@@ -183,6 +183,7 @@ catkin_package(
 ## in contrast to setup.py, you can choose the destination
  catkin_install_python(PROGRAMS
    scripts/ai_pt_tracker_app_node.py
+   scripts/ai_pt_tracker_app_img_pub_node.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

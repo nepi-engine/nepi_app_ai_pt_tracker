@@ -57,18 +57,22 @@ class AiPtTrackerApp extends Component {
       app_enabled: false,
       app_msg: "Loading",
 
+      max_proc_rate_hz: null,
+      max_img_rate_hz: null,
+
       image_name: "tracking_image",
 
 
       show_target_settings: false,
-      classifier_running: false,
+
+      available_detectors_list: [],
+      selected_detector: "None",
+
       available_classes_list: [],
       selected_class: "None",
       target_detected: false,
 
       show_image_settings: false,
-      display_image_options: ["Source","Detection","Tracking"],
-      selected_display_image: "Tracking",
       image_topic: "None",
       image_fov_vert_degs: null,
       image_fov_horz_degs: null,
@@ -91,11 +95,14 @@ class AiPtTrackerApp extends Component {
       set_tilt_max: 30,
 
       min_area_ratio: null,
+
+      scan_delay_sec: null,
       scan_speed_ratio: null,
       scan_tilt_offset: null,
+
+
       track_speed_ratio: null,
       track_tilt_offset: null,
-      track_update_rate: null,
 
 
       error_goal_min_max_deg: [1,20],
@@ -130,6 +137,7 @@ class AiPtTrackerApp extends Component {
     this.statusErrorListener = this.statusErrorListener.bind(this)
     this.updateStatusErrorListener = this.updateStatusErrorListener.bind(this)
     this.getAppNamespace = this.getAppNamespace.bind(this)
+    this.createDetOptions = this.createDetOptions.bind(this)
     this.createPTXOptions = this.createPTXOptions.bind(this)
     this.onEnterSendInputBoxRangeWindowValue = this.onEnterSendInputBoxRangeWindowValue.bind(this)
     this.onClickToggleShowPtSettings = this.onClickToggleShowPtSettings.bind(this)
@@ -167,20 +175,24 @@ class AiPtTrackerApp extends Component {
 
     this.setState({
 
-      app_enabled: message.app_enabled,
-      app_msg: message.app_msg,
+      app_enabled: message.enabled,
+      app_msg: message.msg,
 
-      classifier_running: message.classifier_running,
-            
+      max_proc_rate_hz: message.max_proc_rate_hz,
+      max_img_rate_hz: message.max_img_rate_hz,
+           
       image_topic: message.image_topic,
       image_fov_vert_degs: message.image_fov_vert_degs,
       image_fov_horz_degs: message.image_fov_horz_degs,      
+
+      available_detectors_list: message.available_detectors_list,
+      selected_detector: message.selected_detector,
 
       available_classes_list: message.available_classes_list,
       selected_class: message.selected_class,
       target_detected: message.target_detected,
 
-      selected_pantilt: message.pantilt_device,
+      selected_pantilt: message.selected_pantilt,
       pantilt_connected: message.pantilt_connected,
       has_position_feedback: message.has_position_feedback,
       has_adjustable_speed: message.has_adjustable_speed,
@@ -195,9 +207,10 @@ class AiPtTrackerApp extends Component {
       set_tilt_min: set_tilt_min_max_deg[0],
       set_tilt_max: set_tilt_min_max_deg[1],
 
-      track_update_rate: message.track_update_rate_hz,
-
       min_area_ratio: message.min_area_ratio,
+
+
+      scan_delay_sec: message.scan_delay_sec,
       scan_speed_ratio: message.scan_speed_ratio,
       scan_tilt_offset: message.scan_tilt_offset,
 
@@ -340,12 +353,37 @@ onEnterSendInputBoxRangeWindowValue(event, topicName, entryName, other_val) {
 }
 
 
+// Function for creating topic options for Select input
+createDetOptions() {
+  const topics = this.state.available_detectors_list
+  var i
+  var items = []
+  items.push(<Option value={"None"}>{"None"}</Option>)
+  var unique_names = createShortUniqueValues(topics)
+  for (i = 0; i < topics.length; i++) {
+    items.push(<Option value={topics[i]}>{unique_names[i]}</Option>)
+  }
+  return items
+}
+
+
+
 renderApp() {
   const {sendTriggerMsg, sendBoolMsg} = this.props.ros
-  const pantilt_connected = this.state.pantilt_connected
   const NoneOption = <Option>None</Option>
+  
+  const pantilt_options = this.createPTXOptions()
+  const sel_pantilt = this.state.selected_pantilt
+  const pantilt_connected = this.state.pantilt_connected
+
+
+  const det_options = this.createDetOptions()
+  const selectedDet = this.state.selected_detector
+  const det_selected= selectedDet !== null && selectedDet !== 'None'
+
   const selectedClass = this.state.selected_class
   const class_sel = selectedClass !== null && selectedClass !== 'None'
+
   const connected = this.state.connected === true
   const appNamespace = this.getAppNamespace()
 
@@ -381,7 +419,29 @@ renderApp() {
 
         </Column>
         <Column>
+
+        </Column>
+      </Columns>
+
+
+      <Columns>
+        <Column>
+
         <div hidden={(connected !== true )}>
+
+        <Label title={"Select Detector"}>
+          <Select
+            id="det_select"
+            onChange={(event) => onDropdownSelectedSendStr.bind(this)(event, appNamespace + "/select_detector")}
+            value={this.state.selected_det}
+          >
+            {(det_options.length > 1)
+              ? det_options
+              : NoneOption}
+          </Select>
+          </Label>
+
+
 
         <Label title={"Select Target Class"}>
           <Select
@@ -395,10 +455,30 @@ renderApp() {
           </Select>
           </Label>
 
-          </div>
 
-        </Column>
-      </Columns>
+
+              <Label title={"Select Pan-Tilt Device"}>
+              <Select
+                id="pt_select"
+                onChange={(event) => onDropdownSelectedSendStr.bind(this)(event, appNamespace + "/select_pantilt")}
+                value={sel_pantilt}
+              >
+                {(pantilt_options.length > 1)
+                  ? pantilt_options
+                  : NoneOption}
+              </Select>
+            </Label>
+
+
+
+                  </div>
+            
+ 
+
+          </Column>
+        </Columns>
+
+
 
 
 
@@ -409,17 +489,17 @@ renderApp() {
         <Column>
 
 
-        <Label title={"PanTilt Connected"}>
-            <BooleanIndicator value={pantilt_connected} />
-          </Label>
-
-          <Label title={"AI Detection Running"}>
-            <BooleanIndicator value={this.state.classifier_running} />
+          <Label title={"Detector Selected"}>
+            <BooleanIndicator value={det_selected} />
           </Label>
 
 
           <Label title={"Target Class Selected"}>
             <BooleanIndicator value={class_sel} />
+          </Label>
+
+          <Label title={"Pan-Tilt Connected"}>
+            <BooleanIndicator value={pantilt_connected} />
           </Label>
 
 
@@ -531,8 +611,6 @@ onClickToggleShowPtSettings(){
 }
 
 renderPtSettings() {
-  const pantilt_options = this.createPTXOptions()
-  const sel_pantilt = this.state.selected_pantilt
   const set_tilt_min = this.state.set_tilt_min ? this.state.set_tilt_min : -180
   const set_tilt_max = this.state.set_tilt_max ? this.state.set_tilt_max : 180
   const NoneOption = <Option>None</Option>
@@ -541,30 +619,16 @@ renderPtSettings() {
 
 
   return (
-    <Section title={"PanTilt Settings"}>
+    <Section title={"Pan-Tilt Settings"}>
 
     <Columns>
       <Column>
 
  
-    <label style={{fontWeight: 'bold'}} align={"left"} textAlign={"left"}>
-        {"Pan Tilt Settings"}
-       </label>
 
        <Columns>
           <Column>
 
-              <Label title={"Select PanTilt Device"}>
-              <Select
-                id="pt_select"
-                onChange={(event) => onDropdownSelectedSendStr.bind(this)(event, appNamespace + "/select_pantilt")}
-                value={sel_pantilt}
-              >
-                {(pantilt_options.length > 1)
-                  ? pantilt_options
-                  : NoneOption}
-              </Select>
-            </Label>
 
             <Label title="Show Settings">
                     <Toggle
@@ -582,11 +646,11 @@ renderPtSettings() {
           <Column>
 
           </Column>
-        </Columns>
-
-
+          </Columns>
 
         <div hidden={(this.state.show_pt_settings === false)}>
+
+{/*
 
                 <Columns>
                   <Column>
@@ -609,8 +673,8 @@ renderPtSettings() {
                     <SliderAdjustment
                   title={"Track Update Rate (Hz)"}
                   msgType={"std_msgs/float32"}
-                  adjustment={this.state.track_update_rate}
-                  topic={appNamespace + "/set_track_update_rate"}
+                  adjustment={this.state.max_proc_rate_hz}
+                  topic={appNamespace + "/set_max_proc_rate_hz"}
                   scaled={1.0}
                   min={1}
                   max={5}
@@ -658,6 +722,8 @@ renderPtSettings() {
                   </Column>
                 </Columns>
 
+  */}
+
               <Columns>
                 <Column>
                   <div style={{ borderTop: "1px solid #ffffff", marginTop: Styles.vars.spacing.medium, marginBottom: Styles.vars.spacing.xs }}/>
@@ -666,6 +732,8 @@ renderPtSettings() {
                         {"Scan Settings"}
                       </label>
 
+
+{/*
                       <div hidden={this.state.has_adjustable_speed === false}>
 
                             <SliderAdjustment
@@ -681,6 +749,8 @@ renderPtSettings() {
                             />
 
                         </div>
+
+  */}
 
                         <div hidden={this.state.has_position_feedback === false}>
 
@@ -707,7 +777,7 @@ renderPtSettings() {
                           <label style={{fontWeight: 'bold'}} align={"left"} textAlign={"left"}>
                               {"Track Settings"}
                             </label>
-
+{/*
                           <div hidden={this.state.has_adjustable_speed === false}>
 
                               <SliderAdjustment
@@ -724,7 +794,7 @@ renderPtSettings() {
 
                           </div>
 
-
+  */}
 
                 </Column>
               </Columns>
@@ -759,19 +829,6 @@ renderImageSettings() {
 
 
           <Columns>
-          <Column>
-
-          <Label title={"Select Display Image"}>
-              <Select
-                id="selectedDisplayImage"
-                onChange={(event) => onDropdownSelectedSetState.bind(this)(event, "selected_display_image")}
-                value={this.state.selected_display_image}
-              >
-                {createMenuListFromStrList(this.state.display_image_options,false,[],[],[])}
-              </Select>
-            </Label>
-
-          </Column>
           <Column>
 
 
@@ -839,19 +896,6 @@ renderTargetSettings() {
 
       <Columns>
         <Column>
-
-
-        <Label title={"Select Target Class"}>
-          <Select
-            id="class_select"
-            onChange={(event) => onDropdownSelectedSendStr.bind(this)(event, appNamespace + "/select_class")}
-            value={this.state.selected_class}
-          >
-            {this.state.available_classes_list
-              ? createMenuListFromStrList(this.state.available_classes_list, false, [],['None'],[])
-              : NoneOption}
-          </Select>
-          </Label>
 
 
               <Label title="Show Settings">
@@ -949,26 +993,17 @@ renderTargetSettings() {
 }
 
 
+
 getDisplayImageInfo(){
-  const sel_image = this.state.selected_display_image
   const { namespacePrefix, deviceId} = this.props.ros
-  var namespace = ""
-  var text = ""
-  if (sel_image === 'Source') {
-    namespace = this.state.image_topic
-    text = "Source"
-  }
-  else if (sel_image === 'Detection'){
-    namespace = "/" + namespacePrefix + "/" + deviceId + "/" + "ai_detector_mgr/detection_image"
-    text = "Detection"
-  }
-  else {
-    namespace = "/" + namespacePrefix + "/" + deviceId + "/" + this.state.appName + '/' + this.state.image_name
-    text = "Tracking"
-  }
+  var namespace = "/" + namespacePrefix + "/" + deviceId + "/" + this.state.appName + '/' + this.state.image_name
+  var text = "AI PanTilt Tracking"
   return [namespace,text]
 
 }
+
+
+
 
   render() {
     if (this.state.needs_update === true){
