@@ -620,7 +620,7 @@ class pantiltTargetTrackerApp(object):
             'qsize': 10,
             'callback': self.setErrorGoalCb, 
             'callback_args': ()
-        },                
+        }          
     }
 
 
