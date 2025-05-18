@@ -216,8 +216,7 @@ class AiPtTrackerImgPub:
                         params_dict = self.PARAMS_DICT,
                         services_dict = self.SRVS_DICT,
                         pubs_dict = self.PUBS_DICT,
-                        subs_dict = self.SUBS_DICT,
-                        log_class_name = True
+                        subs_dict = self.SUBS_DICT
         )
 
         self.node_if.wait_for_ready()
