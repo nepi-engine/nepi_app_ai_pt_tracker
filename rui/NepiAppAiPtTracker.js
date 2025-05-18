@@ -31,7 +31,7 @@ import Styles from "./Styles"
 import BooleanIndicator from "./BooleanIndicator"
 
 
-import CameraViewer from "./CameraViewer"
+import ImageViewer from "./Nepi_IF_ImageViewer"
 import NepiIFSaveData from "./Nepi_IF_SaveData"
 
 import {createShortUniqueValues, onDropdownSelectedSendStr, onDropdownSelectedSetState, createMenuListFromStrList, onUpdateSetStateValue} from "./Utilities"
@@ -1020,7 +1020,7 @@ getDisplayImageInfo(){
         <div style={{ width: '55%' }}>
 
 
-              <CameraViewer
+              <ImageViewer
               imageTopic={imageNamespace}
               title={imageText}
               hideQualitySelector={false}
