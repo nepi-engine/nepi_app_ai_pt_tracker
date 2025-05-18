@@ -49,7 +49,7 @@ from nepi_app_ai_pt_tracker.msg import AiPtTrackerStatus , TrackingErrors
 
 from nepi_api.node_if import NodeSubscribersIF, NodeClassIF
 from nepi_api.messages_if import MsgIF
-from nepi_api.system_if import SaveDataIF
+from nepi_api.system_if import SaveDataIF, StatesIF
 
 
 from nepi_api.connect_mgr_if_ai_model import ConnectMgrAiModelIF
@@ -501,30 +501,6 @@ class pantiltTargetTrackerApp(object):
             'callback': self.setOverlayImgNameCb, 
             'callback_args': ()
         },
-        'set_overlay_labels': {
-            'namespace': self.node_namespace,
-            'topic': 'set_overlay_labels',
-            'msg': Bool,
-            'qsize': 10,
-            'callback': self.setOverlayLabelsCb, 
-            'callback_args': ()
-        },
-        'set_overlay_clf_name': {
-            'namespace': self.node_namespace,
-            'topic': 'set_overlay_clf_name',
-            'msg': Bool,
-            'qsize': 10,
-            'callback': self.setOverlayClfNameCb, 
-            'callback_args': ()
-        },
-        'set_overlay_img_name': {
-            'namespace': self.node_namespace,
-            'topic': 'set_overlay_img_name',
-            'msg': Bool,
-            'qsize': 10,
-            'callback': self.setOverlayImgNameCb, 
-            'callback_args': ()
-        },
         'set_image_fov_vert': {
             'namespace': self.node_namespace,
             'topic': 'set_image_fov_vert',
@@ -644,7 +620,7 @@ class pantiltTargetTrackerApp(object):
             'qsize': 10,
             'callback': self.setErrorGoalCb, 
             'callback_args': ()
-        },                
+        }          
     }
 
 
@@ -1021,7 +997,7 @@ class pantiltTargetTrackerApp(object):
 
   def unsubscribeDetTopic(self):
     if self.det_if is not None:
-        self.msg_if.pub_warn('Unsubscribing det subs for detector: ' + det_topic)
+        self.msg_if.pub_warn('Unsubscribing det subs for detector: ' + self.current_det)
         self.detector_connected = False
         self.det_if.unregister_subs()
         self.det_if = None
@@ -1176,7 +1152,7 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     pt_topic = msg.data
     if pt_topic == "None":
-      pt_topic == ""
+      pt_topic = ""
     if pt_topic != "":
       pt_topic = nepi_ros.find_topic(pt_topic)
     self.status_msg.selected_pantilt = pt_topic
@@ -1338,8 +1314,8 @@ class pantiltTargetTrackerApp(object):
 
   def setMaxProcRateCb(self,msg):
       max_rate = msg.data
-      if max_rate <  MIN_MAX_RATE:
-          max_rate = MIN_MAX_RATE
+      if max_rate <  self.MIN_MAX_RATE:
+          max_rate = self.MIN_MAX_RATE
       elif max_rate > MAX_MAX_RATE:
           max_rate = MAX_MAX_RATE
       self.status_msg.max_proc_rate_hz = max_rate
@@ -1349,8 +1325,8 @@ class pantiltTargetTrackerApp(object):
 
   def setMaxImgRateCb(self,msg):
       max_rate = msg.data
-      if max_rate <  MIN_MAX_RATE:
-          max_rate = MIN_MAX_RATE
+      if max_rate <  self.MIN_MAX_RATE:
+          max_rate = self.MIN_MAX_RATE
       elif max_rate > MAX_MAX_RATE:
           max_rate = MAX_MAX_RATE
       self.status_msg.max_img_rate_hz = max_rate
@@ -1493,7 +1469,7 @@ class pantiltTargetTrackerApp(object):
              self.pan_tilt_goal_deg = [pan_tilt_pos_msg.yaw_deg,pan_tilt_pos_msg.pitch_deg]
              self.current_scan_dir = 1
              self.publish_status(do_updates = False)
-            except Exception as E:
+            except Exception as e:
               self.msg_if.pub_warn("Scanning to max_pan excpetion: " + str(e))
             #self.msg_if.pub_warn("Scanning to max_pan")
             self.start_scanning = False
@@ -1552,7 +1528,7 @@ class pantiltTargetTrackerApp(object):
              self.pan_tilt_goal_deg = [pan_tilt_pos_msg.yaw_deg,pan_tilt_pos_msg.pitch_deg]
              self.current_scan_dir = 1
              self.publish_status(do_updates = False)
-            except Exception as E:
+            except Exception as e:
               self.msg_if.pub_warn("Cont to max_pan excpetion: " + str(e))
         self.msg_if.pub_warn("Ending Scan Process") 
 
