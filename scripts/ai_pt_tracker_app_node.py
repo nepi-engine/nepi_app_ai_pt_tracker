@@ -636,7 +636,8 @@ class pantiltTargetTrackerApp(object):
 
 
     # Setup Image IF
-    self.image_if = ImageIF(namespace = self.node_namespace, topic = self.img_data_product)
+    img_namespace = nepi_ros.create_namespace(self.node_namespace,self.img_data_product)
+    self.image_if = ImageIF(namespace = img_namespace, log_name = self.img_data_product)
 
     time.sleep(1)
 
@@ -1763,9 +1764,6 @@ class pantiltTargetTrackerApp(object):
       self.status_msg.image_fov_vert_degs = self.node_if.get_param('image_fov_vert_degs')
       self.status_msg.image_fov_horz_degs = self.node_if.get_param('image_fov_horz_degs')
 
-      self.status_msg.overlay_labels = self.node_if.get_param('overlay_labels')
-      self.status_msg.overlay_clf_name = self.node_if.get_param('overlay_clf_name')
-      self.status_msg.overlay_img_name = self.node_if.get_param('overlay_img_name')
 
       min_pan = self.node_if.get_param("min_pan_angle")
       max_pan = self.node_if.get_param("max_pan_angle")
@@ -1801,13 +1799,11 @@ class pantiltTargetTrackerApp(object):
     self.status_msg.selected_detector = selected_detector 
 
 
-    self.status_msg.img_source_topic = self.img_source_topic
+    self.status_msg.image_source_topic = self.img_source_topic
 
 
     self.status_msg.available_classes = sorted(self.classes_list)
     selected_class = self.node_if.get_param('selected_class')
-
-
     if selected_class not in self.classes_list:
       selected_class = "None"
     self.status_msg.selected_class = selected_class 

@@ -1,10 +1,16 @@
 # AI PanTilt Tracker Status Message
 
+bool enabled
+
 float32 max_proc_rate_hz
 float32 max_img_rate_hz
 
 string[] available_detectors
 string selected_detector
+string image_source_topic
+string[] available_classes
+string selected_class
+bool target_detected
 
 float32 image_fov_vert_degs 
 float32 image_fov_horz_degs 
@@ -39,5 +45,5 @@ bool is_tracking
 int32 pan_direction
 
 string msg
-bool target_detected
+
 
