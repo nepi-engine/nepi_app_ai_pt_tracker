@@ -34,7 +34,7 @@ import BooleanIndicator from "./BooleanIndicator"
 import ImageViewer from "./Nepi_IF_ImageViewer"
 import NepiIFSaveData from "./Nepi_IF_SaveData"
 
-import {createShortUniqueValues, onDropdownSelectedSendStr, onDropdownSelectedSetState, createMenuListFromStrList, onUpdateSetStateValue} from "./Utilities"
+import {createShortUniqueValues, onDropdownSelectedSendStr, onDropdownSelectedSetState, createMenuListFromStrList, onUpdateSetStateValue, onChangeSwitchSendBoolValue} from "./Utilities"
 
 function round(value, decimals = 0) {
   return Number(value).toFixed(decimals)
@@ -83,14 +83,19 @@ class AiPtTrackerApp extends Component {
       pantilt_connected: false,
       has_position_feedback: false,
       has_adjustable_speed: false,
+      has_auto_pan: false,
+      has_auto_tilt: false,
 
       pan_min: -180,
       pan_max: 180,
       tilt_min: -180,
       tilt_max: 180,
       
+      auto_pan_enabled: false,
       set_pan_min: -60,
       set_pan_max: 60,
+
+      auto_tilt_enabled: false,
       set_tilt_min: -30,
       set_tilt_max: 30,
 
@@ -196,14 +201,20 @@ class AiPtTrackerApp extends Component {
       pantilt_connected: message.pantilt_connected,
       has_position_feedback: message.has_position_feedback,
       has_adjustable_speed: message.has_adjustable_speed,
+      has_auto_pan: message.has_auto_pan,
+      has_auto_tilt: message.has_auto_tilt,
+
 
       pan_min: pan_min_max_deg[0],
       pan_max: pan_min_max_deg[1],
       tilt_min: tilt_min_max_deg[0],
       tilt_max: tilt_min_max_deg[1],
       
+      auto_pan_enabled: message.auto_pan_enabled,
       set_pan_min: set_pan_min_max_deg[0],
       set_pan_max: set_pan_min_max_deg[1],
+
+      auto_tilt_enabled: message.auto_tilt_enbled,
       set_tilt_min: set_tilt_min_max_deg[0],
       set_tilt_max: set_tilt_min_max_deg[1],
 
@@ -650,7 +661,7 @@ renderPtSettings() {
 
         <div hidden={(this.state.show_pt_settings === false)}>
 
-{/*
+
 
                 <Columns>
                   <Column>
@@ -686,6 +697,17 @@ renderPtSettings() {
                 <Columns>
                   <Column>
 
+                  <div hidden={this.state.has_auto_pan === false}>
+
+                  <Label title="Enable Auto Pan">
+                    <Toggle
+                      checked={this.state.auto_pan===true}
+                      onClick={() => this.onChangeSwitchSendBoolValue("/set_auto_pan_enable",!this.state_auto_pan)}>
+                    </Toggle>
+                  </Label>
+
+
+
                 <Label title={"Set Pan Min"}>
                     <Input id="set_pan_min" 
                       value={this.state.set_pan_min} 
@@ -701,8 +723,20 @@ renderPtSettings() {
                       onKeyDown= {(event) => this.onEnterSendInputBoxRangeWindowValue(event,"/set_min_max_pan_angles","max",this.state.set_pan_min)} />                      
                   </Label>  
 
+                  </div>
+
                 </Column>
                 <Column>
+
+                <div hidden={this.state.has_auto_tilt === false}>
+
+                <Label title="Enable Auto Tilt">
+                    <Toggle
+                      checked={this.state.auto_pan===true}
+                      onClick={() => this.onChangeSwitchSendBoolValue("/set_auto_tilt_enable",!this.state_auto_pan)}>
+                    </Toggle>
+                  </Label>
+
 
                   <Label title={"Set Tilt Min"}>
                     <Input id="set_tilt_min" 
@@ -719,10 +753,12 @@ renderPtSettings() {
                       onKeyDown= {(event) => this.onEnterSendInputBoxRangeWindowValue(event,"/set_min_max_tilt_angles","max",this.state.set_tilt_min)} />                      
                   </Label>  
 
+                  </div>
+
                   </Column>
                 </Columns>
 
-  */}
+
 
               <Columns>
                 <Column>
@@ -733,7 +769,7 @@ renderPtSettings() {
                       </label>
 
 
-{/*
+
                       <div hidden={this.state.has_adjustable_speed === false}>
 
                             <SliderAdjustment
@@ -750,7 +786,7 @@ renderPtSettings() {
 
                         </div>
 
-  */}
+
 
                         <div hidden={this.state.has_position_feedback === false}>
 

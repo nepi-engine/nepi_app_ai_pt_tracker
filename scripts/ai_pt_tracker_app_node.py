@@ -139,6 +139,8 @@ class pantiltTargetTrackerApp(object):
   pt_connected = False
   has_position_feedback = True
   has_adjustable_speed = False
+  has_auto_pan = False
+  has_auto_tilt = False
   last_sel_pt = ""
   current_scan_dir = 1
   
@@ -1025,7 +1027,8 @@ class pantiltTargetTrackerApp(object):
           self.msg_if.pub_info("Found ptx status topic: " + self.pt_status_topic)
           ptx_namespace = self.pt_status_topic.replace("status","")
           self.msg_if.pub_info("Found ptx namespace: " + ptx_namespace)
-          self.selected_pantilt = ptx_namespace.split("/ptx")[0]
+          selected_pantilt = ptx_namespace.split("/ptx")[0]
+          self.selected_pantilt = nepi_ros.crate_namespace(selected_pantilt,"/ptx")
           # PanTilt Status Topics
           # PanTilt Control Publish Topics
           PTX_SET_SPEED_RATIO_TOPIC = ptx_namespace + "set_speed_ratio"
@@ -1039,14 +1042,16 @@ class pantiltTargetTrackerApp(object):
           PTX_SET_SOFT_LIMITS_TOPIC = ptx_namespace + "set_soft_limits"
 
           ## Get PTX capabilities info
-          '''
+
           ptx_capabilities_service_topic = ptx_namespace + "capabilities_query"
           try:
             ptx_caps_service = nepi_ros.connect_service(ptx_capabilities_service_topic, PTXCapabilitiesQuery)
             time.sleep(1)
             ptx_caps = ptx_caps_service()
-            self.has_position_feedback = ptx_caps.absolute_positioning
-            self.has_adjustable_speed =  ptx_caps.adjustable_speed
+            self.has_position_feedback = ptx_caps.has_absolute_positioning
+            self.has_adjustable_speed =  ptx_caps.has_adjustable_speed
+            self.has_auto_pan =  ptx_caps.has_auto_pan
+            self.has_auto_tilt =  ptx_caps.has_auto_tilt
           except Exception as e:
             self.msg_if.pub_warn("Failed to call PTX capabilities service: " + ptx_capabilities_service_topic + " " + str(e))
             self.has_position_feedback = False
@@ -1385,6 +1390,7 @@ class pantiltTargetTrackerApp(object):
 
     self.has_position_feedback = pt_status_msg.has_position_feedback
     self.has_adjustable_speed =  pt_status_msg.has_adjustable_speed
+    self.has_auto_pan = self.has_adjustable_speed
     self.cur_speed_ratio = pt_status_msg.speed_ratio
     self.pt_status_msg_lock.acquire()
     self.pt_status_msg = pt_status_msg
@@ -1687,7 +1693,6 @@ class pantiltTargetTrackerApp(object):
         status_msg.namespace = self.node_namespace
         status_msg.state = self.state
 
-        status_msg.has_sleep = self.has_sleep
 
         if do_updates == True:
             status_msg.enabled = self.node_if.get_param('enabled')
@@ -1813,6 +1818,8 @@ class pantiltTargetTrackerApp(object):
     self.status_msg.pantilt_connected = self.pt_connected
     self.status_msg.has_position_feedback = self.has_position_feedback
     self.status_msg.has_adjustable_speed = self.has_adjustable_speed
+    self.status_msg.has_auto_pan = self.has_auto_pan
+    self.status_msg.has_auto_tilt = self.has_auto_tilt
     self.pt_status_msg_lock.acquire()
     pt_status_msg = copy.deepcopy(self.pt_status_msg)
     self.pt_status_msg_lock.release()

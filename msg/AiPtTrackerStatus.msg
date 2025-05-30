@@ -19,10 +19,16 @@ string selected_pantilt
 bool pantilt_connected
 bool has_position_feedback
 bool has_adjustable_speed
-float32[] tilt_min_max_deg
+bool has_auto_pan
+bool has_auto_tilt
+
 float32[] pan_min_max_deg
-float32[] set_tilt_min_max_deg
 float32[] set_pan_min_max_deg
+bool auto_pan_enabled
+
+float32[] tilt_min_max_deg
+float32[] set_tilt_min_max_deg
+bool auto_tilt_enabled
 
 float32 scan_delay_sec
 float32 scan_speed_ratio
