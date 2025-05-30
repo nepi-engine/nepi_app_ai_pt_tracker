@@ -9,40 +9,47 @@
 #
 
 
-import os
 import time
 import sys
-import numpy as np
-import cv2
 import copy
 import threading
-import math
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import statistics
+import numpy as np
+import cv2
 
-from nepi_sdk import nepi_ros
+from nepi_sdk import nepi_ros 
 from nepi_sdk import nepi_utils
-from nepi_sdk import nepi_pc 
-from nepi_sdk import nepi_img 
+from nepi_sdk import nepi_img
 
-from std_msgs.msg import UInt8, Int32, Float32, Empty, String, Bool, Header
-from geometry_msgs.msg import Vector3
+from std_msgs.msg import UInt8, Int32, Float32, Bool, Empty, String, Header
+from std_msgs.msg import ColorRGBA
 from sensor_msgs.msg import Image
-from rospy.numpy_msg import numpy_msg
-from cv_bridge import CvBridge
-from nepi_ros_interfaces.msg import BoundingBox, BoundingBoxes, BoundingBox3D, BoundingBoxes3D, \
-                                    ObjectCount, ClassifierSelection, \
-                                    StringArray, TargetLocalization, TargetLocalizations
-from nepi_ros_interfaces.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryRequest
-from nepi_ros_interfaces.msg import Frame3DTransform
-from nepi_app_ai_targeting.msg import AiTargetingStatus, AiTargetingTargets
+
+from nepi_ros_interfaces.msg import PanTiltLimits, PanTiltPosition, SingleAxisTimedMove, PTXStatus, StringArray
+from nepi_ros_interfaces.srv import PTXCapabilitiesQuery
+
+from nepi_ros_interfaces.msg import BoundingBox, BoundingBoxes, ObjectCount, RangeWindow
+from nepi_ros_interfaces.msg import AiDetectorInfo, AiDetectorStatus
+from nepi_ros_interfaces.srv import AiDetectorInfoQuery, AiDetectorInfoQueryRequest, AiDetectorInfoQueryResponse
+
+from nepi_app_ai_pt_tracker.msg import AiPtTrackerStatus , TrackingErrors
+
+from nepi_ros_interfaces.msg import SaveDataRate, SaveDataStatus
+
+from nepi_api.node_if import NodeSubscribersIF, NodeClassIF
+from nepi_api.messages_if import MsgIF
+from nepi_api.system_if import SaveDataIF, StatesIF
+
+
+from nepi_api.connect_mgr_if_ai_model import ConnectMgrAiModelIF
+from nepi_api.data_if import ImageIF
+
+from nepi_api.connect_mgr_if_system import ConnectMgrSystemServicesIF
 
 
 from nepi_api.messages_if import MsgIF
 from nepi_api.connect_node_if import ConnectNodeClassIF
 from nepi_api.connect_system_if import ConnectSaveDataIF
-from nepi_api.connect_system_if import ConnectSaveCfgIF
 from nepi_api.data_if import ImageIF
 
 
@@ -399,7 +406,7 @@ class ConnectAppAiPtTracker:
     def unregister(self):
         self._unsubscribeTopic()
 
-    def publish_status(self)
+    def publish_status(self):
         pub_name = 'publish_status'
         msg = Empty()
         self.con_node_if.publish_pub(pub_name,msg) 
