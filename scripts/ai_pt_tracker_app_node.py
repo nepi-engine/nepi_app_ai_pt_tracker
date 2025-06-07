@@ -29,7 +29,7 @@ import statistics
 import numpy as np
 import cv2
 
-from nepi_sdk import nepi_ros 
+from nepi_sdk import nepi_sdk 
 from nepi_sdk import nepi_utils
 from nepi_sdk import nepi_img
 
@@ -37,12 +37,12 @@ from std_msgs.msg import UInt8, Int32, Float32, Bool, Empty, String, Header
 from std_msgs.msg import ColorRGBA
 from sensor_msgs.msg import Image
 
-from nepi_ros_interfaces.msg import PanTiltLimits, PanTiltPosition, SingleAxisTimedMove, PTXStatus, StringArray
-from nepi_ros_interfaces.srv import PTXCapabilitiesQuery
+from nepi_sdk_interfaces.msg import PanTiltLimits, PanTiltPosition, SingleAxisTimedMove, PTXStatus, StringArray
+from nepi_sdk_interfaces.srv import PTXCapabilitiesQuery
 
-from nepi_ros_interfaces.msg import BoundingBox, BoundingBoxes, ObjectCount, RangeWindow
-from nepi_ros_interfaces.msg import AiDetectorInfo, AiDetectorStatus
-from nepi_ros_interfaces.srv import AiDetectorInfoQuery, AiDetectorInfoQueryRequest, AiDetectorInfoQueryResponse
+from nepi_sdk_interfaces.msg import BoundingBox, BoundingBoxes, ObjectCount, RangeWindow
+from nepi_sdk_interfaces.msg import AiDetectorInfo, AiDetectorStatus
+from nepi_sdk_interfaces.srv import AiDetectorInfoQuery, AiDetectorInfoQueryRequest, AiDetectorInfoQueryResponse
 
 from nepi_app_ai_pt_tracker.msg import AiPtTrackerStatus , TrackingErrors
 
@@ -208,11 +208,11 @@ class pantiltTargetTrackerApp(object):
   FACTORY_NODE_NAME = "app_ai_pt_tracker" # Can be overwitten by luanch command
   def __init__(self):
     #### APP NODE INIT SETUP ####
-    nepi_ros.init_node(name= self.FACTORY_NODE_NAME)
+    nepi_sdk.init_node(name= self.FACTORY_NODE_NAME)
     self.class_name = type(self).__name__
-    self.base_namespace = nepi_ros.get_base_namespace()
-    self.node_name = nepi_ros.get_node_name()
-    self.node_namespace = nepi_ros.get_node_namespace()
+    self.base_namespace = nepi_sdk.get_base_namespace()
+    self.node_name = nepi_sdk.get_node_name()
+    self.node_namespace = nepi_sdk.get_node_namespace()
 
     ##############################  
     # Create Msg Class
@@ -228,7 +228,7 @@ class pantiltTargetTrackerApp(object):
     mgr_sys_srv_if = ConnectMgrSystemServicesIF()
     success = mgr_sys_srv_if.wait_for_ready()
     if success == False:
-        nepi_ros.signal_shutdown(self.node_name + ": Failed to get System Status Msg")
+        nepi_sdk.signal_shutdown(self.node_name + ": Failed to get System Status Msg")
 
     #self.api_lib_folder = mgr_sys_srv_if.get_sys_folder_path('api_lib',API_LIB_FOLDER)
     #self.msg_if.pub_info("Using User Config Folder: " + str(self.api_lib_folder))
@@ -252,13 +252,13 @@ class pantiltTargetTrackerApp(object):
         self.msg_if.pub_warn("Launching Detector Img Pub Node: " + img_pub_node_name)
 
         # Pre Set Img Pub Params
-        dp_param_ns = nepi_ros.create_namespace(img_pub_node_name,'data_product')
-        nepi_ros.set_param(dp_param_ns,self.img_data_product)
+        dp_param_ns = nepi_sdk.create_namespace(img_pub_node_name,'data_product')
+        nepi_sdk.set_param(dp_param_ns,self.img_data_product)
 
-        app_param_ns = nepi_ros.create_namespace(img_pub_node_name,'det_namespace')
-        nepi_ros.set_param(app_param_ns,self.node_namespace)
+        app_param_ns = nepi_sdk.create_namespace(img_pub_node_name,'det_namespace')
+        nepi_sdk.set_param(app_param_ns,self.node_namespace)
         
-        [success, msg, pub_process] = nepi_ros.launch_node(pkg_name, img_pub_file, img_pub_node_name)
+        [success, msg, pub_process] = nepi_sdk.launch_node(pkg_name, img_pub_file, img_pub_node_name)
 
         self.msg_if.pub_warn("Detector Img Pub Node launch return msg: " + msg)
 
@@ -638,7 +638,7 @@ class pantiltTargetTrackerApp(object):
 
 
     # Setup Image IF
-    img_namespace = nepi_ros.create_namespace(self.node_namespace,self.img_data_product)
+    img_namespace = nepi_sdk.create_namespace(self.node_namespace,self.img_data_product)
     self.image_if = ImageIF(namespace = img_namespace, log_name = self.img_data_product)
 
     time.sleep(1)
@@ -662,18 +662,18 @@ class pantiltTargetTrackerApp(object):
 
     # Set up the timer that start scanning when no objects are detected
     self.msg_if.pub_info("Setting up processes")
-    nepi_ros.start_timer_process(self.UPDATER_PROCESS_DELAY, self.updaterCb, oneshot = True)
+    nepi_sdk.start_timer_process(self.UPDATER_PROCESS_DELAY, self.updaterCb, oneshot = True)
 
     proc_rate = self.node_if.get_param('max_proc_rate_hz')
     proc_delay = float(1) / float(proc_rate)
-    nepi_ros.start_timer_process(proc_delay, self.scanTrackCb, oneshot = True)
+    nepi_sdk.start_timer_process(proc_delay, self.scanTrackCb, oneshot = True)
 
 
     ##############################
     ## Initiation Complete
     self.msg_if.pub_info(" Initialization Complete")
     # Spin forever (until object is detected)
-    nepi_ros.spin()
+    nepi_sdk.spin()
     ##############################
 
   #######################
@@ -757,7 +757,7 @@ class pantiltTargetTrackerApp(object):
     target_q_len = self.status_msg.target_queue_len
     target_l_len = self.status_msg.target_lost_len
     min_area_ratio =  self.status_msg.min_area_ratio
-    ros_timestamp = bounding_boxes_msg.header.stamp
+    get_msg_timestamp = bounding_boxes_msg.header.stamp
     bb_list = bounding_boxes_msg.bounding_boxes
     bounding_boxes_msg.bounding_boxes = [] # Clear for later use
     self.img_height = bounding_boxes_msg.image_height
@@ -863,7 +863,7 @@ class pantiltTargetTrackerApp(object):
     # Check if PT still there
     if self.pt_connected == True:
       if self.pt_status_topic != "":
-        pt_status_topic=nepi_ros.find_topic(self.pt_status_topic)
+        pt_status_topic=nepi_sdk.find_topic(self.pt_status_topic)
         if pt_status_topic == "":
           self.msg_if.pub_warn("PT lost: " + self.pt_status_topic)
           self.pt_connected = False
@@ -940,7 +940,7 @@ class pantiltTargetTrackerApp(object):
       #self.msg_if.pub_info(" App update process msg: " + app_msg)
       self.publish_status()
 
-    nepi_ros.start_timer_process (nepi_ros.ros_duration(self.UPDATER_PROCESS_DELAY), self.updaterCb, oneshot = True)
+    nepi_sdk.start_timer_process (nepi_sdk.ros_duration(self.UPDATER_PROCESS_DELAY), self.updaterCb, oneshot = True)
     
  
   def subscribeDetTopic(self,det_topic):
@@ -1017,7 +1017,7 @@ class pantiltTargetTrackerApp(object):
       if selected_pantilt != "None" and selected_pantilt != "":
         pt_status_topic = os.path.join(selected_pantilt,"/ptx/status")
         #self.msg_if.pub_info("Looking for topic name: " + pt_status_topic)
-        self.pt_status_topic=nepi_ros.find_topic(pt_status_topic)
+        self.pt_status_topic=nepi_sdk.find_topic(pt_status_topic)
         if self.pt_status_sub is not None:
           self.pt_connected = False
           self.removePtSubs()
@@ -1028,7 +1028,7 @@ class pantiltTargetTrackerApp(object):
           ptx_namespace = self.pt_status_topic.replace("status","")
           self.msg_if.pub_info("Found ptx namespace: " + ptx_namespace)
           selected_pantilt = ptx_namespace.split("/ptx")[0]
-          self.selected_pantilt = nepi_ros.crate_namespace(selected_pantilt,"/ptx")
+          self.selected_pantilt = nepi_sdk.crate_namespace(selected_pantilt,"/ptx")
           # PanTilt Status Topics
           # PanTilt Control Publish Topics
           PTX_SET_SPEED_RATIO_TOPIC = ptx_namespace + "set_speed_ratio"
@@ -1045,7 +1045,7 @@ class pantiltTargetTrackerApp(object):
 
           ptx_capabilities_service_topic = ptx_namespace + "capabilities_query"
           try:
-            ptx_caps_service = nepi_ros.connect_service(ptx_capabilities_service_topic, PTXCapabilitiesQuery)
+            ptx_caps_service = nepi_sdk.connect_service(ptx_capabilities_service_topic, PTXCapabilitiesQuery)
             time.sleep(1)
             ptx_caps = ptx_caps_service()
             self.has_position_feedback = ptx_caps.has_absolute_positioning
@@ -1058,19 +1058,19 @@ class pantiltTargetTrackerApp(object):
             self.has_adjustable_speed =  False
           '''
           ## Create Publishers
-          self.send_pt_home_pub = nepi_ros.create_publisher(PTX_GOHOME_TOPIC, Empty, queue_size=10)
-          self.set_pt_speed_ratio_pub = nepi_ros.create_publisher(PTX_SET_SPEED_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_position_pub = nepi_ros.create_publisher(PTX_JOG_POSITION_TOPIC, PanTiltPosition, queue_size=10)
-          self.set_pt_pan_ratio_pub = nepi_ros.create_publisher(PTX_GOTO_PAN_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_tilt_ratio_pub = nepi_ros.create_publisher(PTX_GOTO_TILT_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_pan_jog_pub = nepi_ros.create_publisher(PTX_JOG_PAN_TOPIC, SingleAxisTimedMove, queue_size=10)
-          self.set_pt_tilt_jog_pub = nepi_ros.create_publisher(PTX_JOG_TILT_TOPIC, SingleAxisTimedMove, queue_size=10)
-          self.set_pt_soft_limits_pub = nepi_ros.create_publisher(PTX_SET_SOFT_LIMITS_TOPIC, PanTiltLimits, queue_size=10)
-          self.pt_stop_motion_pub = nepi_ros.create_publisher(PTX_STOP_TOPIC, Empty, queue_size=10)
+          self.send_pt_home_pub = nepi_sdk.create_publisher(PTX_GOHOME_TOPIC, Empty, queue_size=10)
+          self.set_pt_speed_ratio_pub = nepi_sdk.create_publisher(PTX_SET_SPEED_RATIO_TOPIC, Float32, queue_size=10)
+          self.set_pt_position_pub = nepi_sdk.create_publisher(PTX_JOG_POSITION_TOPIC, PanTiltPosition, queue_size=10)
+          self.set_pt_pan_ratio_pub = nepi_sdk.create_publisher(PTX_GOTO_PAN_RATIO_TOPIC, Float32, queue_size=10)
+          self.set_pt_tilt_ratio_pub = nepi_sdk.create_publisher(PTX_GOTO_TILT_RATIO_TOPIC, Float32, queue_size=10)
+          self.set_pt_pan_jog_pub = nepi_sdk.create_publisher(PTX_JOG_PAN_TOPIC, SingleAxisTimedMove, queue_size=10)
+          self.set_pt_tilt_jog_pub = nepi_sdk.create_publisher(PTX_JOG_TILT_TOPIC, SingleAxisTimedMove, queue_size=10)
+          self.set_pt_soft_limits_pub = nepi_sdk.create_publisher(PTX_SET_SOFT_LIMITS_TOPIC, PanTiltLimits, queue_size=10)
+          self.pt_stop_motion_pub = nepi_sdk.create_publisher(PTX_STOP_TOPIC, Empty, queue_size=10)
           time.sleep(1)
           ## Create Subscribers
           self.msg_if.pub_info("Subscribing to PTX Status Msg: " + self.pt_status_topic)
-          self.pt_status_sub = nepi_ros.create_subscriber(self.pt_status_topic, PTXStatus, self.ptStatusCb, queue_size = 1)
+          self.pt_status_sub = nepi_sdk.create_subscriber(self.pt_status_topic, PTXStatus, self.ptStatusCb, queue_size = 1)
           #self.pt_connected = True # Set in pt_status callback
       else:
         self.selected_pantilt = "None"
@@ -1160,7 +1160,7 @@ class pantiltTargetTrackerApp(object):
     if pt_topic == "None":
       pt_topic = ""
     if pt_topic != "":
-      pt_topic = nepi_ros.find_topic(pt_topic)
+      pt_topic = nepi_sdk.find_topic(pt_topic)
     self.status_msg.selected_pantilt = pt_topic
     self.publish_status(do_updates = False) # Updated Here
     self.node_if.set_param('selected_pantilt',  pt_topic)
@@ -1614,7 +1614,7 @@ class pantiltTargetTrackerApp(object):
               pt_pos_msg = PanTiltPosition()
               pt_pos_msg.yaw_deg = pan_to_goal
               pt_pos_msg.pitch_deg = tilt_to_goal
-              if not nepi_ros.is_shutdown():
+              if not nepi_sdk.is_shutdown():
                 try:
                   self.set_pt_position_pub.publish(pt_pos_msg)   
                   self.pan_tilt_goal_deg = [pan_to_goal,tilt_to_goal]
@@ -1652,7 +1652,7 @@ class pantiltTargetTrackerApp(object):
       proc_rate = 2
 
 
-    nepi_ros.start_timer_process(proc_delay, self.scanTrackCb, oneshot = True)
+    nepi_sdk.start_timer_process(proc_delay, self.scanTrackCb, oneshot = True)
 
 
 

@@ -20,7 +20,7 @@ import cv2
 import threading
 
 
-from nepi_sdk import nepi_ros
+from nepi_sdk import nepi_sdk
 from nepi_sdk import nepi_utils
 from nepi_sdk import nepi_ais
 from nepi_sdk import nepi_img
@@ -28,7 +28,7 @@ from nepi_sdk import nepi_img
 from std_msgs.msg import UInt8, Int32, Float32, Bool, Empty, String, Header
 from sensor_msgs.msg import Image
 
-from nepi_ros_interfaces.msg import StringArray, ObjectCount, BoundingBox, BoundingBoxes
+from nepi_sdk_interfaces.msg import StringArray, ObjectCount, BoundingBox, BoundingBoxes
 
 from nepi_app_ai_pt_tracker.msg import AiPtTrackerStatus , TrackingErrors
 
@@ -72,7 +72,7 @@ NONE_IMG_DICT = {
     'cv2_img': None,
     'width': 0,
     'height': 0,
-    'timestamp': nepi_ros.get_time(),
+    'timestamp': nepi_sdk.get_time(),
     'ros_img_topic': 'None',
     'ros_img_header': Header(),
     'ros_img_stamp': Header().stamp
@@ -87,7 +87,7 @@ BLANK_IMG_DICT = {
     'cv2_img': BLANK_CV2_IMAGE,
     'width': 0,
     'height': 0,
-    'timestamp': nepi_ros.get_time(),
+    'timestamp': nepi_sdk.get_time(),
     'ros_img_topic': 'None',
     'ros_img_header': Header(),
     'ros_img_stamp': Header().stamp
@@ -127,11 +127,11 @@ class AiPtTrackerImgPub:
     DEFAULT_NODE_NAME = "ai_pt_tracker_img_pub" # Can be overwitten by luanch command
     def __init__(self):
         ####  IF INIT SETUP ####
-        nepi_ros.init_node(name = self.DEFAULT_NODE_NAME)
+        nepi_sdk.init_node(name = self.DEFAULT_NODE_NAME)
         self.class_name = type(self).__name__
-        self.base_namespace = nepi_ros.get_base_namespace()
-        self.node_name = nepi_ros.get_node_name()
-        self.node_namespace = nepi_ros.get_node_namespace()
+        self.base_namespace = nepi_sdk.get_base_namespace()
+        self.node_name = nepi_sdk.get_node_name()
+        self.node_namespace = nepi_sdk.get_node_namespace()
 
         ##############################  
         # Create Msg Class
@@ -142,7 +142,7 @@ class AiPtTrackerImgPub:
         # Init Class Variables 
 
         backup_app_namespace = self.node_namespace.replace("_img_pub","")
-        self.app_namespace = nepi_ros.get_param(self.node_namespace + "/app_namespace",backup_app_namespace)
+        self.app_namespace = nepi_sdk.get_param(self.node_namespace + "/app_namespace",backup_app_namespace)
 
         self.classes_list = []
 
@@ -241,13 +241,13 @@ class AiPtTrackerImgPub:
         # Complete Initialization
 
         # Start Timer Processes
-        nepi_ros.start_timer_process((0.1), self.updaterCb, oneshot = True)
+        nepi_sdk.start_timer_process((0.1), self.updaterCb, oneshot = True)
 
         #########################################################
         ## Initiation Complete
         self.msg_if.pub_info("Initialization Complete")
         # Spin forever (until object is detected)
-        nepi_ros.spin()
+        nepi_sdk.spin()
         #########################################################
 
 
@@ -297,7 +297,7 @@ class AiPtTrackerImgPub:
         else:
             # Update Image subscribers
             for i,img_topic in enumerate(img_topics):
-                img_topic = nepi_ros.find_topic(img_topic)
+                img_topic = nepi_sdk.find_topic(img_topic)
                 if img_topic != '':
                     img_topics[i] = img_topic
                     if img_topic not in active_img_topics:
@@ -327,7 +327,7 @@ class AiPtTrackerImgPub:
         '''
 
 
-        nepi_ros.start_timer_process((.5), self.updaterCb, oneshot = True)
+        nepi_sdk.start_timer_process((.5), self.updaterCb, oneshot = True)
 
 
     def subscribeImgTopic(self,img_topic):
@@ -459,7 +459,7 @@ class AiPtTrackerImgPub:
 
 
     def imageCb(self, image_msg, args):     
-        start_time = nepi_ros.get_time()   
+        start_time = nepi_sdk.get_time()   
         img_topic = args
         imgs_info_dict = copy.deepcopy(self.imgs_info_dict) 
 
@@ -485,11 +485,11 @@ class AiPtTrackerImgPub:
                 if timer > delay_time: 
                     self.imgs_info_dict[img_topic]['last_img_time'] = current_time
 
-                    ros_timestamp = image_msg.header.stamp
+                    get_msg_timestamp = image_msg.header.stamp
                     ros_frame_id = image_msg.header.frame_id
 
-                    current_time = nepi_ros.ros_time_now()
-                    latency = (current_time.to_sec() - ros_timestamp.to_sec())
+                    current_time = nepi_sdk.get_msg_time()
+                    latency = (current_time.to_sec() - get_msg_timestamp.to_sec())
                     imgs_info_dict[img_topic]['get_latency_time'] = latency
                     #self.msg_if.pub_info("Detect Pub Latency: {:.2f}".format(latency))
 
@@ -499,10 +499,10 @@ class AiPtTrackerImgPub:
                         det_dict_list = []
                     cv2_img = nepi_img.rosimg_to_cv2img(image_msg)
 
-                    success = self.processDetImage(img_topic, cv2_img, det_dict_list, timestamp = ros_timestamp, frame_id = ros_frame_id)
+                    success = self.processDetImage(img_topic, cv2_img, det_dict_list, timestamp = get_msg_timestamp, frame_id = ros_frame_id)
 
-                    current_time = nepi_ros.ros_time_now()
-                    latency = (current_time.to_sec() - ros_timestamp.to_sec())
+                    current_time = nepi_sdk.get_msg_time()
+                    latency = (current_time.to_sec() - get_msg_timestamp.to_sec())
                     imgs_info_dict[img_topic]['pub_latency_time'] = latency                              
 
 
