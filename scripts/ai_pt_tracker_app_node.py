@@ -1058,19 +1058,19 @@ class pantiltTargetTrackerApp(object):
             self.has_adjustable_speed =  False
           '''
           ## Create Publishers
-          self.send_pt_home_pub = nepi_sdk.create_publisher(PTX_GOHOME_TOPIC, Empty, queue_size=10)
-          self.set_pt_speed_ratio_pub = nepi_sdk.create_publisher(PTX_SET_SPEED_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_position_pub = nepi_sdk.create_publisher(PTX_JOG_POSITION_TOPIC, PanTiltPosition, queue_size=10)
-          self.set_pt_pan_ratio_pub = nepi_sdk.create_publisher(PTX_GOTO_PAN_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_tilt_ratio_pub = nepi_sdk.create_publisher(PTX_GOTO_TILT_RATIO_TOPIC, Float32, queue_size=10)
-          self.set_pt_pan_jog_pub = nepi_sdk.create_publisher(PTX_JOG_PAN_TOPIC, SingleAxisTimedMove, queue_size=10)
-          self.set_pt_tilt_jog_pub = nepi_sdk.create_publisher(PTX_JOG_TILT_TOPIC, SingleAxisTimedMove, queue_size=10)
-          self.set_pt_soft_limits_pub = nepi_sdk.create_publisher(PTX_SET_SOFT_LIMITS_TOPIC, PanTiltLimits, queue_size=10)
-          self.pt_stop_motion_pub = nepi_sdk.create_publisher(PTX_STOP_TOPIC, Empty, queue_size=10)
+          self.send_pt_home_pub = nepi_sdk.create_publisher(PTX_GOHOME_TOPIC, Empty, _queue_size=10)
+          self.set_pt_speed_ratio_pub = nepi_sdk.create_publisher(PTX_SET_SPEED_RATIO_TOPIC, Float32, _queue_size=10)
+          self.set_pt_position_pub = nepi_sdk.create_publisher(PTX_JOG_POSITION_TOPIC, PanTiltPosition, _queue_size=10)
+          self.set_pt_pan_ratio_pub = nepi_sdk.create_publisher(PTX_GOTO_PAN_RATIO_TOPIC, Float32, _queue_size=10)
+          self.set_pt_tilt_ratio_pub = nepi_sdk.create_publisher(PTX_GOTO_TILT_RATIO_TOPIC, Float32, _queue_size=10)
+          self.set_pt_pan_jog_pub = nepi_sdk.create_publisher(PTX_JOG_PAN_TOPIC, SingleAxisTimedMove, _queue_size=10)
+          self.set_pt_tilt_jog_pub = nepi_sdk.create_publisher(PTX_JOG_TILT_TOPIC, SingleAxisTimedMove, _queue_size=10)
+          self.set_pt_soft_limits_pub = nepi_sdk.create_publisher(PTX_SET_SOFT_LIMITS_TOPIC, PanTiltLimits, _queue_size=10)
+          self.pt_stop_motion_pub = nepi_sdk.create_publisher(PTX_STOP_TOPIC, Empty, _queue_size=10)
           time.sleep(1)
           ## Create Subscribers
           self.msg_if.pub_info("Subscribing to PTX Status Msg: " + self.pt_status_topic)
-          self.pt_status_sub = nepi_sdk.create_subscriber(self.pt_status_topic, PTXStatus, self.ptStatusCb, queue_size = 1)
+          self.pt_status_sub = nepi_sdk.create_subscriber(self.pt_status_topic, PTXStatus, self.ptStatusCb, _queue_size = 1)
           #self.pt_connected = True # Set in pt_status callback
       else:
         self.selected_pantilt = "None"
