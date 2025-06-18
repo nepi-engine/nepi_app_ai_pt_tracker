@@ -25,16 +25,16 @@ from std_msgs.msg import UInt8, Int32, Float32, Bool, Empty, String, Header
 from std_msgs.msg import ColorRGBA
 from sensor_msgs.msg import Image
 
-from nepi_sdk_interfaces.msg import PanTiltLimits, PanTiltPosition, SingleAxisTimedMove, PTXStatus, StringArray
-from nepi_sdk_interfaces.srv import PTXCapabilitiesQuery
+from nepi_interfaces.msg import PanTiltLimits, PanTiltPosition, SingleAxisTimedMove, PTXStatus, StringArray
+from nepi_interfaces.srv import PTXCapabilitiesQuery
 
-from nepi_sdk_interfaces.msg import BoundingBox, BoundingBoxes, ObjectCount, RangeWindow
-from nepi_sdk_interfaces.msg import AiDetectorInfo, AiDetectorStatus
-from nepi_sdk_interfaces.srv import AiDetectorInfoQuery, AiDetectorInfoQueryRequest, AiDetectorInfoQueryResponse
+from nepi_interfaces.msg import BoundingBox, BoundingBoxes, ObjectCount, RangeWindow
+from nepi_interfaces.msg import AiDetectorInfo, AiDetectorStatus
+from nepi_interfaces.srv import AiDetectorInfoQuery, AiDetectorInfoQueryRequest, AiDetectorInfoQueryResponse
 
 from nepi_app_ai_pt_tracker.msg import AiPtTrackerStatus , TrackingErrors
 
-from nepi_sdk_interfaces.msg import SaveDataRate, SaveDataStatus
+from nepi_interfaces.msg import SaveDataRate, SaveDataStatus
 
 from nepi_api.node_if import NodeSubscribersIF, NodeClassIF
 from nepi_api.messages_if import MsgIF
