@@ -205,6 +205,33 @@ class pantiltTargetTrackerApp(object):
 
   det_status_msg = None
 
+
+  enabled = False
+  max_proc_rate_hz = self.FACTORY_MAX_PROC_RATE
+  max_img_rate_hz = self.FACTORY_MAX_IMG_RATE
+  scan_delay_sec = self.FACTORY_SCAN_UPDATE_DELAY
+  selected_detector = 'None'
+  image_fov_vert_degs = self.FACTORY_FOV_VERT_DEG
+  image_fov_horz_degs = self.FACTORY_FOV_HORZ_DEG
+  selected_class = "None"
+  overlay_labels = self.FACTORY_LABELS_OVERLAY
+  overlay_clf_name = self.FACTORY_CLF_OVERLAY
+  overlay_img_name = self.FACTORY_IMG_OVERLAY
+  target_queue_len = self.FACTORY_TARGET_Q_LEN
+  target_lost_len = self.FACTORY_TARGET_L_LEN
+  min_area_ratio = self.FACTORY_MIN_AREA_RATIO
+  selected_pantilt = "None"
+  scan_speed_ratio = self.FACTORY_SCAN_SPEED_RATIO
+  scan_tilt_offset = self.FACTORY_SCAN_TILT_DEG
+  min_pan_angle = self.FACTORY_MIN_MAX_PAN_ANGLES[0]
+  max_pan_angle = self.FACTORY_MIN_MAX_PAN_ANGLES[1]
+  min_tilt_angle = self.FACTORY_MIN_MAX_TILT_ANGLES[0]
+  max_tilt_angle = self.FACTORY_MIN_MAX_TILT_ANGLES[1]
+  track_speed_ratio = self.FACTORY_TRACK_SPEED_RATIO
+  track_tilt_offset = self.FACTORY_TRACK_TILT_OFFSET_DEG
+  error_goal_deg = self.FACTORY_ERROR_GOAL_DEG
+
+
   #######################
   ### Node Initialization
   FACTORY_NODE_NAME = "app_ai_pt_tracker" # Can be overwitten by luanch command
@@ -681,27 +708,24 @@ class pantiltTargetTrackerApp(object):
   #######################
   ### App Config Functions
 
-
-
-
-
   def initCb(self,do_updates = False):
-    self.msg_if.pub_info(" Setting init values to param values")
-    if do_updates == True:
-      self.resetCb(do_updates)
+    if self.node_if is not None:
 
+      pass
+
+    if do_updates == True:
+      pass
+    self.publish_status()
 
   def resetCb(self,do_updates = True):
-    self.publish_status()
+    if do_updates:
+        pass
+    self.initCb
 
-
-  def factoryResetCb(self):
-    self.last_image_topic = ""
-    self.last_sel_pt = ""
-    self.publish_status()
-        
-
-
+  def factoryResetCb(self,do_updates = True):
+    if do_updates:
+        pass
+    self.initCb
 
   def get_target_bearings(self,box):
       target_vert_angle_deg = 0

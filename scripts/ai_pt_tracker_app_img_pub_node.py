@@ -254,17 +254,24 @@ class AiPtTrackerImgPub:
 
 
     def initCb(self,do_updates = False):
-        self.msg_if.pub_info(" Setting init values to param values")
+        if self.node_if is not None:
+
+            pass
+
         if do_updates == True:
-            self.resetCb(do_updates)
-
-
-    def resetCb(self):
+            pass
         self.publish_status()
 
-    def factoryResetCb(self):
-        self.last_det_dict_list = []
-        self.publish_status()
+    def resetCb(self,do_updates = True):
+        if do_updates:
+            pass
+        self.initCb
+
+    def factoryResetCb(self,do_updates = True):
+        if do_updates:
+            pass
+        self.initCb
+
 
 
     def getActiveImgTopics(self):
