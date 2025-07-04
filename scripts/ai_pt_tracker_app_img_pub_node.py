@@ -96,6 +96,8 @@ BLANK_IMG_DICT = {
 
 class AiPtTrackerImgPub:
 
+    node_if = None
+
     image_pub_name = 'tracker_image'
     data_products = [image_pub_name]
 

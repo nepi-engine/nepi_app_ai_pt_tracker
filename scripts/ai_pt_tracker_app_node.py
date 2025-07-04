@@ -113,6 +113,8 @@ class pantiltTargetTrackerApp(object):
   FACTORY_TARGET_Q_LEN = 3
   FACTORY_TARGET_L_LEN = 5
 
+  node_if = None
+
   data_products = ["bounding_boxes", IMAGE_DATA_PRODUCT]
   targeting_status_msg = None
 
@@ -808,7 +810,8 @@ class pantiltTargetTrackerApp(object):
           self.target_box_q_lock.release()
           bounding_boxes_msg.bounding_boxes = [largest_box]
     # Now publish our bounding boxes message
-    self.node_if.publish_pub('bounding_boxes',bounding_boxes_msg)
+    if self.node_if is not None:
+      self.node_if.publish_pub('bounding_boxes',bounding_boxes_msg)
 
     found_obj_msg = ObjectCount()
     found_obj_msg.header = bounding_boxes_msg.header
@@ -1635,7 +1638,8 @@ class pantiltTargetTrackerApp(object):
       tracking_error_msg.pitch_cur_deg = pt_status_msg.pitch_now_deg
       tracking_error_msg.pitch_error_deg = self.pan_tilt_errors_deg[1]
       tracking_error_msg.pitch_goal_deg = self.pan_tilt_goal_deg[1]
-      self.node_if.publish_pub('errors', tracking_error_msg)
+      if self.node_if is not None:
+        self.node_if.publish_pub('errors', tracking_error_msg)
 
     proc_time = nepi_utils.get_time() - start_time
     if self.is_scanning == True:
@@ -1750,7 +1754,8 @@ class pantiltTargetTrackerApp(object):
 
 
         #self.msg_if.pub_warn("Sending Status Msg: " + str(status_msg))
-        self.node_if.publish_pub('det_status_pub',status_msg)
+        if self.node_if is not None:
+          self.node_if.publish_pub('det_status_pub',status_msg)
 
 
 
@@ -1849,7 +1854,8 @@ class pantiltTargetTrackerApp(object):
     self.status_msg.pan_direction = self.current_scan_dir
 
     #self.msg_if.pub_info("Printing status: " + str(self.status_msg))
-    self.node_if.publish_pub('status_pub', self.status_msg)
+    if self.node_if is not None:
+      self.node_if.publish_pub('status_pub', self.status_msg)
 
 
 
