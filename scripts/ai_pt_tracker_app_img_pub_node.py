@@ -686,8 +686,3 @@ class AiPtTrackerImgPub:
 #########################################
 if __name__ == '__main__':
   AiPtTrackerImgPub()
-
-
-
-
-
