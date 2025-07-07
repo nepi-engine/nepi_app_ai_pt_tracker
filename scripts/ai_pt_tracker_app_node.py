@@ -720,12 +720,12 @@ class pantiltTargetTrackerApp(object):
   def resetCb(self,do_updates = True):
     if do_updates:
         pass
-    self.initCb
+    self.initCb()
 
   def factoryResetCb(self,do_updates = True):
     if do_updates:
         pass
-    self.initCb
+    self.initCb()
 
   def get_target_bearings(self,box):
       target_vert_angle_deg = 0
