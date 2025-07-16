@@ -207,29 +207,29 @@ class pantiltTargetTrackerApp(object):
 
 
   enabled = False
-  max_proc_rate_hz = self.FACTORY_MAX_PROC_RATE
-  max_img_rate_hz = self.FACTORY_MAX_IMG_RATE
-  scan_delay_sec = self.FACTORY_SCAN_UPDATE_DELAY
+  max_proc_rate_hz = FACTORY_MAX_PROC_RATE
+  max_img_rate_hz = FACTORY_MAX_IMG_RATE
+  scan_delay_sec = FACTORY_SCAN_UPDATE_DELAY
   selected_detector = 'None'
-  image_fov_vert_degs = self.FACTORY_FOV_VERT_DEG
-  image_fov_horz_degs = self.FACTORY_FOV_HORZ_DEG
+  image_fov_vert_degs = FACTORY_FOV_VERT_DEG
+  image_fov_horz_degs = FACTORY_FOV_HORZ_DEG
   selected_class = "None"
-  overlay_labels = self.FACTORY_LABELS_OVERLAY
-  overlay_clf_name = self.FACTORY_CLF_OVERLAY
-  overlay_img_name = self.FACTORY_IMG_OVERLAY
-  target_queue_len = self.FACTORY_TARGET_Q_LEN
-  target_lost_len = self.FACTORY_TARGET_L_LEN
-  min_area_ratio = self.FACTORY_MIN_AREA_RATIO
+  overlay_labels = FACTORY_LABELS_OVERLAY
+  overlay_clf_name = FACTORY_CLF_OVERLAY
+  overlay_img_name = FACTORY_IMG_OVERLAY
+  target_queue_len = FACTORY_TARGET_Q_LEN
+  target_lost_len = FACTORY_TARGET_L_LEN
+  min_area_ratio = FACTORY_MIN_AREA_RATIO
   selected_pantilt = "None"
-  scan_speed_ratio = self.FACTORY_SCAN_SPEED_RATIO
-  scan_tilt_offset = self.FACTORY_SCAN_TILT_DEG
-  min_pan_angle = self.FACTORY_MIN_MAX_PAN_ANGLES[0]
-  max_pan_angle = self.FACTORY_MIN_MAX_PAN_ANGLES[1]
-  min_tilt_angle = self.FACTORY_MIN_MAX_TILT_ANGLES[0]
-  max_tilt_angle = self.FACTORY_MIN_MAX_TILT_ANGLES[1]
-  track_speed_ratio = self.FACTORY_TRACK_SPEED_RATIO
-  track_tilt_offset = self.FACTORY_TRACK_TILT_OFFSET_DEG
-  error_goal_deg = self.FACTORY_ERROR_GOAL_DEG
+  scan_speed_ratio = FACTORY_SCAN_SPEED_RATIO
+  scan_tilt_offset = FACTORY_SCAN_TILT_DEG
+  min_pan_angle = FACTORY_MIN_MAX_PAN_ANGLES[0]
+  max_pan_angle = FACTORY_MIN_MAX_PAN_ANGLES[1]
+  min_tilt_angle = FACTORY_MIN_MAX_TILT_ANGLES[0]
+  max_tilt_angle = FACTORY_MIN_MAX_TILT_ANGLES[1]
+  track_speed_ratio = FACTORY_TRACK_SPEED_RATIO
+  track_tilt_offset = FACTORY_TRACK_TILT_OFFSET_DEG
+  error_goal_deg = FACTORY_ERROR_GOAL_DEG
 
 
   #######################
@@ -282,9 +282,14 @@ class pantiltTargetTrackerApp(object):
 
         # Pre Set Img Pub Params
         dp_param_ns = nepi_sdk.create_namespace(img_pub_node_name,'data_product')
+
+        self.dp_param_ns = self.img_data_product
+        self.publish_status()
         nepi_sdk.set_param(dp_param_ns,self.img_data_product)
 
         app_param_ns = nepi_sdk.create_namespace(img_pub_node_name,'det_namespace')
+        self.publish_status()
+        self.app_param_ns = self.node_namespace
         nepi_sdk.set_param(app_param_ns,self.node_namespace)
         
         [success, msg, pub_process] = nepi_sdk.launch_node(pkg_name, img_pub_file, img_pub_node_name)
@@ -693,7 +698,7 @@ class pantiltTargetTrackerApp(object):
     self.msg_if.pub_info("Setting up processes")
     nepi_sdk.start_timer_process(self.UPDATER_PROCESS_DELAY, self.updaterCb, oneshot = True)
 
-    proc_rate = self.node_if.get_param('max_proc_rate_hz')
+    proc_rate = self.max_proc_rate_hz
     proc_delay = float(1) / float(proc_rate)
     nepi_sdk.start_timer_process(proc_delay, self.scanTrackCb, oneshot = True)
 
@@ -710,8 +715,30 @@ class pantiltTargetTrackerApp(object):
 
   def initCb(self,do_updates = False):
     if self.node_if is not None:
-
-      pass
+      self.enabled = self.node_if.get_param('enabled')
+      self.max_proc_rate_hz = self.node_if.get_param('max_proc_rate_hz')
+      self.max_img_rate_hz = self.node_if.get_param('max_img_rate_hz')
+      self.scan_delay_sec = self.node_if.get_param('scan_delay_sec')    
+      self.selected_detector = self.node_if.get_param('selected_detector')
+      self.image_fov_vert_degs = self.node_if.get_param('image_fov_vert_degs')
+      self.image_fov_horz_degs = self.node_if.get_param('image_fov_horz_degs')
+      self.selected_class = self.node_if.get_param('selected_class')
+      self.overlay_labels = self.node_if.get_param('overlay_labels')
+      self.overlay_clf_name = self.node_if.get_param('overlay_clf_name')
+      self.overlay_img_name = self.node_if.get_param('overlay_img_name')
+      self.enabtarget_queue_lenled = self.node_if.get_param('target_queue_len')
+      self.target_lost_len = self.node_if.get_param('target_lost_len')
+      self.min_area_ratio = self.node_if.get_param('min_area_ratio')
+      self.selected_pantilt = self.node_if.get_param('selected_pantilt')
+      self.scan_speed_ratio = self.node_if.get_param('scan_speed_ratio')
+      self.scan_tilt_offset = self.node_if.get_param('scan_tilt_offset')
+      self.min_pan_angle = self.node_if.get_param('min_pan_angle')
+      self.max_pan_angle = self.node_if.get_param('max_pan_angle')
+      self.min_tilt_angle = self.node_if.get_param('min_tilt_angle')
+      self.max_tilt_angle = self.node_if.get_param('max_tilt_angle')
+      self.track_speed_ratio = self.node_if.get_param('track_speed_ratio')
+      self.track_tilt_offset = self.node_if.get_param('track_tilt_offset')
+      self.error_goal_deg = self.node_if.get_param('error_goal_deg')
 
     if do_updates == True:
       pass
@@ -855,7 +882,7 @@ class pantiltTargetTrackerApp(object):
     ############## DEBUG
 
     update_status = False
-    enabled = self.node_if.get_param("enabled")
+    enabled = self.enabled
 
     app_msg = ""
     #self.msg_if.pub_warn("Running app update process with app enabled: " + str(enabled))
@@ -867,7 +894,7 @@ class pantiltTargetTrackerApp(object):
 
 
     # Setup PT subscribers and Publishers if needed
-    sel_pt = self.node_if.get_param('selected_pantilt')
+    sel_pt = self.selected_pantilt
     pt_valid = sel_pt != "None" and sel_pt != ""
     pt_changed = sel_pt != self.last_sel_pt
 
@@ -929,7 +956,7 @@ class pantiltTargetTrackerApp(object):
       # Update selected detectors info
       cur_det = self.current_det
       #self.msg_if.pub_warn("Got current det: " + str(cur_det))
-      sel_det = self.node_if.get_param('selected_detector')
+      sel_det = self.selected_detector
       #self.msg_if.pub_warn("Got selected det: " + str(sel_det))
       #self.msg_if.pub_warn("Starting check with dets keys: " + str(self.dets_dict.keys()))
       # Update Image subscribers
@@ -946,7 +973,7 @@ class pantiltTargetTrackerApp(object):
     # Check class selection
     class_sel = False
     #self.msg_if.pub_warn("sel class: " + sel_class)
-    sel_class = self.node_if.get_param('selected_class')
+    sel_class = self.selected_class
     if len(self.classes_list) > 0:
       if sel_class  in self.classes_list:
         class_sel = True
@@ -1083,7 +1110,7 @@ class pantiltTargetTrackerApp(object):
             self.msg_if.pub_warn("Failed to call PTX capabilities service: " + ptx_capabilities_service_topic + " " + str(e))
             self.has_position_feedback = False
             self.has_adjustable_speed =  False
-          '''
+
           ## Create Publishers
           self.send_pt_home_pub = nepi_sdk.create_publisher(PTX_GOHOME_TOPIC, Empty, queue_size=10)
           self.set_pt_speed_ratio_pub = nepi_sdk.create_publisher(PTX_SET_SPEED_RATIO_TOPIC, Float32, queue_size=10)
@@ -1156,7 +1183,10 @@ class pantiltTargetTrackerApp(object):
     val = msg.data
     self.status_msg.enabled = val
     self.publish_status(do_updates = False) # Updated Here
-    self.node_if.set_param('enabled',val)
+    self.enabled = val
+    self.publish_status() 
+    if self.node_if is not None:
+      self.node_if.set_param('enabled',val)
 
 
 
@@ -1166,7 +1196,10 @@ class pantiltTargetTrackerApp(object):
     if selected_det in self.detectors_list or selected_det == "None":
       self.status_msg.selected_detector =  selected_det
       self.publish_status(do_updates = False) # Updated Here
-      self.node_if.set_param('selected_detector',  selected_det)
+      self.selected_detector = selected_det
+      self.publish_status() 
+      if self.node_if is not None:
+        self.node_if.set_param('selected_detector',  selected_det)
 
     
 
@@ -1176,7 +1209,10 @@ class pantiltTargetTrackerApp(object):
     if selected_class in self.classes_list or selected_class == "None":
       self.status_msg.selected_class = selected_class
       self.publish_status(do_updates = False) # Updated Here
-      self.node_if.set_param('selected_class',  selected_class)
+      self.selected_class = selected_class
+      self.publish_status()
+      if self.node_if is not None:
+        self.node_if.set_param('selected_class',  selected_class)
 
     
     
@@ -1188,9 +1224,10 @@ class pantiltTargetTrackerApp(object):
       pt_topic = ""
     if pt_topic != "":
       pt_topic = nepi_sdk.find_topic(pt_topic)
-    self.status_msg.selected_pantilt = pt_topic
+    self.selected_pantilt = pt_topic
     self.publish_status(do_updates = False) # Updated Here
-    self.node_if.set_param('selected_pantilt',  pt_topic)
+    if self.node_if is not None:
+      self.node_if.set_param('selected_pantilt',  pt_topic)
 
     
 
@@ -1262,8 +1299,8 @@ class pantiltTargetTrackerApp(object):
     ##self.msg_if.pub_info(msg)
     val = msg.data
 
-    min_tilt = self.node_if.get_param("min_tilt_angle")
-    max_tilt = self.node_if.get_param("max_tilt_angle")
+    min_tilt = self.min_tilt_angle
+    max_tilt = self.max_tilt_angle
     if val >= min_tilt and val <= max_tilt:
       self.status_msg.scan_tilt_offset = val
       self.publish_status(do_updates = False) # Updated Here
@@ -1574,7 +1611,7 @@ class pantiltTargetTrackerApp(object):
 
 
         self.last_track_time = nepi_utils.get_time() 
-        error_goal = self.node_if.get_param('error_goal_deg')
+        error_goal = self.error_goal_deg
         track_speed_ratio = self.status_msg.track_speed_ratio
         track_tilt_offset = self.status_msg.track_tilt_offset    
         '''
@@ -1723,29 +1760,29 @@ class pantiltTargetTrackerApp(object):
 
 
         if do_updates == True:
-            status_msg.enabled = self.node_if.get_param('enabled')
-            sel_classes = self.node_if.get_param('selected_classes')
+            status_msg.enabled = self.enabled
+            sel_classes = self.selected_classes
             status_msg.selected_classes = sel_classes
             status_msg.selected_classes_colors = self.create_classes_colors_msg(sel_classes)
                
 
-            status_msg.sleep_enabled = self.node_if.get_param('sleep_enabled')
-            status_msg.sleep_suspend_sec = self.node_if.get_param('sleep_suspend_sec')
-            status_msg.sleep_run_sec = self.node_if.get_param('sleep_run_sec')
+            status_msg.sleep_enabled = self.sleep_enabled
+            status_msg.sleep_suspend_sec = self.sleep_suspend_sec
+            status_msg.sleep_run_sec = self.sleep_run_sec
             status_msg.sleep_state = self.sleep_state
 
-            status_msg.img_tiling = self.node_if.get_param('img_tiling')
+            status_msg.img_tiling = self.img_tiling
 
-            status_msg.overlay_labels = self.node_if.get_param('overlay_labels')
-            status_msg.overlay_clf_name = self.node_if.get_param('overlay_clf_name')
-            status_msg.overlay_img_name = self.node_if.get_param('overlay_img_name')
+            status_msg.overlay_labels = self.overlay_labels
+            status_msg.overlay_clf_name = self.overlay_clf_name
+            status_msg.overlay_img_name = self.overlay_img_name
 
-            status_msg.threshold = self.node_if.get_param('threshold')
-            status_msg.max_proc_rate_hz = self.node_if.get_param('max_proc_rate_hz')
-            status_msg.max_img_rate_hz = self.node_if.get_param('max_img_rate_hz')
+            status_msg.threshold = self.threshold
+            status_msg.max_proc_rate_hz = self.max_proc_rate_hz
+            status_msg.max_img_rate_hz = self.max_img_rate_hz
 
 
-            status_msg.selected_img_topics = self.node_if.get_param('selected_img_topics')
+            status_msg.selected_img_topics = self.selected_img_topics
 
         img_source_topics = []
         img_det_namespaces = []
@@ -1789,45 +1826,45 @@ class pantiltTargetTrackerApp(object):
 
     if do_updates == True:
 
-      self.status_msg.enabled = self.node_if.get_param('enabled')
+      self.status_msg.enabled = self.enabled
 
 
-      self.status_msg.max_proc_rate_hz = self.node_if.get_param('max_proc_rate_hz')
-      self.status_msg.max_img_rate_hz = self.node_if.get_param('max_img_rate_hz')
+      self.status_msg.max_proc_rate_hz = self.max_proc_rate_hz
+      self.status_msg.max_img_rate_hz = self.max_img_rate_hz
       
-      self.status_msg.image_fov_vert_degs = self.node_if.get_param('image_fov_vert_degs')
-      self.status_msg.image_fov_horz_degs = self.node_if.get_param('image_fov_horz_degs')
+      self.status_msg.image_fov_vert_degs = self.image_fov_vert_degs
+      self.status_msg.image_fov_horz_degs = self.image_fov_horz_degs
 
 
-      min_pan = self.node_if.get_param("min_pan_angle")
-      max_pan = self.node_if.get_param("max_pan_angle")
+      min_pan = self.min_pan_angle
+      max_pan = self.max_pan_angle
       self.status_msg.set_pan_min_max_deg = [min_pan,max_pan]
 
-      min_tilt = self.node_if.get_param("min_tilt_angle")
-      max_tilt = self.node_if.get_param("max_tilt_angle")
+      min_tilt = self.min_tilt_angle
+      max_tilt = self.max_tilt_angle
       self.status_msg.set_tilt_min_max_deg = [min_tilt,max_tilt]
       
 
-      self.status_msg.min_area_ratio = self.node_if.get_param("min_area_ratio")
+      self.status_msg.min_area_ratio = self.min_area_ratio
 
-      self.status_msg.scan_delay_sec = self.node_if.get_param("scan_delay_sec")
-      self.status_msg.scan_speed_ratio = self.node_if.get_param("scan_speed_ratio")
-      self.status_msg.scan_tilt_offset = self.node_if.get_param("scan_tilt_offset")
+      self.status_msg.scan_delay_sec = self.scan_delay_sec
+      self.status_msg.scan_speed_ratio = self.scan_speed_ratio
+      self.status_msg.scan_tilt_offset = self.scan_tilt_offset
 
-      self.status_msg.track_speed_ratio = self.node_if.get_param("track_speed_ratio")
-      self.status_msg.track_tilt_offset = self.node_if.get_param("track_tilt_offset")
+      self.status_msg.track_speed_ratio = self.track_speed_ratio
+      self.status_msg.track_tilt_offset = self.track_tilt_offset
 
       self.status_msg.error_goal_min_max_deg = self.MIN_MAX_ERROR_GOAL
-      self.status_msg.error_goal_deg = self.node_if.get_param('error_goal_deg')
+      self.status_msg.error_goal_deg = self.error_goal_deg
 
 
-      self.status_msg.target_queue_len = self.node_if.get_param('target_queue_len')
-      self.status_msg.target_lost_len = self.node_if.get_param('target_lost_len')
+      self.status_msg.target_queue_len = self.target_queue_len
+      self.status_msg.target_lost_len = self.target_lost_len
 
 
 
     self.status_msg.available_detectors = sorted(self.detectors_list)
-    selected_detector = self.node_if.get_param('selected_detector')
+    selected_detector = self.selected_detector
     if selected_detector not in self.detectors_list:
       selected_detector = "None"
     self.status_msg.selected_detector = selected_detector 
@@ -1837,7 +1874,7 @@ class pantiltTargetTrackerApp(object):
 
 
     self.status_msg.available_classes = sorted(self.classes_list)
-    selected_class = self.node_if.get_param('selected_class')
+    selected_class = self.selected_class
     if selected_class not in self.classes_list:
       selected_class = "None"
     self.status_msg.selected_class = selected_class 
